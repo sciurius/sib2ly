@@ -79,7 +79,7 @@ opts = OptionParser.new do |opts|
 
   # Switch to print the version.
   opts.on_tail("--version", "Show version") do
-    puts OptionParser::Version.join('.')
+    puts VERSION_MAJOR + "." + VERSION_MINOR
     exit
   end
 end
