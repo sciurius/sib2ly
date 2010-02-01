@@ -18,6 +18,7 @@ $:.unshift File.dirname(__FILE__)
 
 require 'rubygems'
 require 'util'
+require 'version'
 require 'nokogiri'
 require 'translatable'
 require 'noterest'
@@ -95,7 +96,7 @@ opts = OptionParser.new do |opts|
 
   # Switch to print the version.
   opts.on_tail("--version", "Show version") do
-    puts VERSION_MAJOR + "." + VERSION_MINOR
+    puts VERSION_MAJOR.to_s + "." + VERSION_MINOR.to_s
     exit
   end
 end
