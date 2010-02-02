@@ -97,6 +97,8 @@ class Staff < Translatable
   end
 
   def process
+
+        
     split_into_voices
     
     verbose("Processing individual voices.")

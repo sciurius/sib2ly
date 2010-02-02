@@ -78,14 +78,28 @@ class Voice
   end
 
   def detect_phrasing_slurs(spanners)
-    # detect phrasing slurs
+    # Detect phrasing (overlapping) slurs
     slurs = spanners.select{|sp| sp.is_a?(Slur)}
     slurs.each do |this|
       slurs.each do |other|
-        if this != other and ((this.start_bar_number < other.start_bar_number) or
-              (this.start_bar_number == other.start_bar_number and this.nr_begin.position <= other.nr_begin.position) and
-              ((this.end_bar_number > other.end_bar_number) or
-                (this.end_bar_number == other.end_bar_number and this.nr_begin.position >= other.nr_begin.position)))
+
+        #        tbb = this.start_bar_number
+        #        tbe = this.end_bar_number
+        #        obb = other.start_bar_number
+        #        obe = other.end_bar_number
+        #        tb = this.nr_begin.position
+        #        te =
+        if this != other and
+            (
+            (
+              (this.start_bar_number < other.start_bar_number) or
+                (this.start_bar_number == other.start_bar_number and this.nr_begin.position <= other.nr_begin.position)
+            ) and
+              (
+              (this.end_bar_number > other.end_bar_number) or
+                (this.end_bar_number == other.end_bar_number and this.nr_end.position >= other.nr_end.position)
+            )
+          )
           this.is_phrasing = true
           this.text_begin = "\\("
           this.text_end = "\\)"
@@ -217,7 +231,6 @@ class Voice
   end
 
   def process
-
     @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
     link_notes

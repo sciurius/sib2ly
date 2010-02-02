@@ -181,6 +181,17 @@ class Bar
   end
 
   def process
+    # Very rarely there would be more than one BarRest in the same voice per bar
+    br = @objects.select{|obj| obj.is_a?(BarRest)}
+    if br.length > 1
+      puts "WARNING! There is a bug in the original Sibelius score: more than"
+       puts "two BarRests in bar " + @number.to_s + "! Ignoring the extra."
+       for i in 1..br.length - 1
+         @objects.delete(br[i])
+       end
+    end
+
+
     # remove KeySigature from global except in the first bar
     if @system_staff and @number != 1
       @objects -= @objects.select{|obj| obj.is_a?(KeySignature)}
