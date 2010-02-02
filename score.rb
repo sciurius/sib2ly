@@ -22,19 +22,8 @@ class Score < Translatable
     :score_duration, :copyright, :part_name, :score_width, :score_height,
     :staff_height
 
-  def ms2hms(ms)
-    ms /= 1000
-    seconds = ms % 60
-    minutes = (ms / 60 ) % 60
-    hours = (ms / 3600)
 
-    ret = ""
-    ret = ret + hours.to_s + "h " if hours >= 1
-    ret = ret + minutes.to_s + "m " if minutes >= 1
-    ret = ret + seconds.to_s + "s " if seconds > 0
-    return ret
-  end
-
+  # Return a string containing formatted score information.
   def info
     s = ""
     s << "Title:               " + @title + "\n" if @title and !@title.empty?
@@ -51,11 +40,12 @@ class Score < Translatable
     s << "Publisher:           " + @publisher + "\n" if @publisher and !@publisher.empty?
     s << "Other information:   " + @other_information + "\n" if @other_information and !@other_information.empty?
     s << "Part name:           " + @part_name + "\n" if @part_name and !@part_name.empty?
-
   end
+
   def initialize
 
   end
+
   def from_xml(xml)
     @file_name = xml["FileName"]
     @score_duration = xml["ScoreDuration"].to_i
@@ -74,13 +64,29 @@ class Score < Translatable
     @staves = []
     @staff_groups =[]
     @instruments=[]
-    (xml/"staff").each do |staff|
+    verbose("Creating staves from XML.")
+    (xml/"Staff").each do |staff|
       @staves << Staff.new(staff)
     end
-    
+
+    verbose("Creating SystemStaff from XML.")
     @system_staff = Staff.new((xml/"SystemStaff").first)
+
+
+    puts ""
+    #process
+  end
+
+  def process
+    verbose("Applying magic to staves.")
+    @staves.each do |staff|
+      staff.process
+    end
+    @system_staff.process
+    
+    verbose("Grouping staves into instruments.")
     i = 0
-    # create instruments from staves
+    # Create instruments from staves
     while i < @staves.length
       ns = @staves[i].num_staves_in_same_instrument
       @instruments << Instrument.new(@staves[i, ns])
@@ -97,15 +103,11 @@ class Score < Translatable
     @staff_groups << StaffGroup.new
     @staff_groups.last << @instruments.select{|instrument| instrument.family == "strings"}
 
-    #process
-  end
-
-  def process
-    #detect_title_etc
     sync_grace_notes
   end
 
   def sync_grace_notes
+    verbose("Casting spells on grace notes.")
     @system_staff.voices.first.bars.each_with_index do |b, index|
       max_grace_length = 0
       @staves.each do |staff|
@@ -152,18 +154,23 @@ class Score < Translatable
   end
 
   def to_ly
+    verbose("Translating Score to LilyPond.")
     ly PREAMBLE
     ly "\\header"
     ly "{"
     ly '  title = "' + escape_quotes(title) + "\"" if title
     ly '  subtitle = "' + escape_quotes(subtitle) + "\"" if subtitle
     ly '} % Header'
+
+    verbose("Translating staves.")
     @staves.each do |staff|
       #puts staff.full_instrument_name
-      ly  safe_instrument_name(staff.instrument_name) + " = {"
+      ly safe_instrument_name(staff.instrument_name) + " = {"
       staff.to_ly
       ly "}"
     end
+
+    verbose("Translating SystemStaff to LilyPond.")
     ly ""
     ly "global = {"
     @system_staff.to_ly
@@ -173,6 +180,8 @@ class Score < Translatable
     ly "{"
     ly "  \\override VerticalAlignment #'max-stretch = #ly:align-interface::calc-max-stretch"
     ly "}"
+
+    verbose("Writing groups of staves.")
     ly "{  <<"
     @staff_groups.each do |group|
       ly group.to_ly

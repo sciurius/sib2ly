@@ -1,4 +1,4 @@
-# This file is part of SIB2LY    Copyright 2010 Kirill Sidorov
+  # This file is part of SIB2LY    Copyright 2010 Kirill Sidorov
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,20 +14,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class BarRest < NoteRest
-  attr_accessor :length, :real_duration, :texts
+  attr_accessor :real_duration, :texts
   def initialize
     super
     @position = 0
     @texts = []
-    @real_duration = @length
+    @real_duration = @duration
   end
 
   def initialize_from_xml(xml)
     super(xml)
     parent_bar = xml.parent
-    @length = parent_bar["Length"].to_i
+    @duration = parent_bar["Length"].to_i
     @position = 0
-    @real_duration = @length
+    @real_duration = @duration
   end
 
   def BarRest.new_from_xml(xml)
@@ -45,14 +45,14 @@ class BarRest < NoteRest
     s << voice_mode_to_ly
 
     s << " " if !@texts.empty?
-    f = gcd(@length, 1024);
+    f = gcd(@duration, 1024);
     s << grace_to_ly
     if 1 == voice
       s << "R1*"
     else
       s << "s1*"
     end
-    s << (@length/f).to_s + "/" + (1024/f).to_s;
+    s << (@duration/f).to_s + "/" + (1024/f).to_s;
     @texts.each{|text| s << text.to_ly}
     return s
   end

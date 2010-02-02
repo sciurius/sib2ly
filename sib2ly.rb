@@ -65,10 +65,10 @@ end
 
 
 
-opt = OpenStruct.new
-opt.filename = []
-opt.verbose = false
-opt.info = false
+$opt = OpenStruct.new
+$opt.filename = []
+$opt.verbose = false
+$opt.info = false
 
 opts = OptionParser.new do |opts|
   script_name = File.basename($0)
@@ -78,11 +78,11 @@ opts = OptionParser.new do |opts|
   opts.separator ""
   opts.separator "Specific options:"
   opts.on("-i", "--info", "Display score information but do not convert") do |i|
-    opt.info = i;
+    $opt.info = i;
   end
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    options.verbose = v
+    $opt.verbose = v
   end
   
   opts.separator ""
@@ -102,17 +102,17 @@ opts = OptionParser.new do |opts|
 end
 
 opts.parse!(ARGV)
-opt.filename = ARGV.pop
+$opt.filename = ARGV.pop
 
-if !opt.filename
+if !$opt.filename
   puts "ERROR: Invalid input file name."
 	Process.exit
 else
-  opt.out_file = make_out_filename(opt.filename)
+  $opt.out_file = make_out_filename($opt.filename)
 end
 
  puts "Reading the score..."
- fin = File.new(opt.filename, 'r')
+ fin = File.new($opt.filename, 'r')
  sib = Nokogiri.XML(fin)
  score = Score.new
  score.from_xml(sib.root);
@@ -120,11 +120,11 @@ end
  score.process
 
 
-if opt.info
+if $opt.info
   # display score information
   puts score.info
 else
-  file = File.open(opt.out_file, 'w')
+  file = File.open($opt.out_file, 'w')
   $ly = LilypondFile.new(file)
   score.to_ly
   puts "done."
@@ -161,4 +161,4 @@ end
 # time stamp and score duration
 # tremolo как NoteRest
 # Sibelius versions
-
+# more than two voices

@@ -13,15 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-class Staff
+class Staff < Translatable
   attr_accessor :family, :is_system_staff, :instrument_name,
     :full_instrument_name, :short_instrument_name, :initial_clef,
-    :initial_style_id, :voices, :num_staves_in_same_instrument, :num_stave_lines
+    :initial_style_id, :voices, :num_staves_in_same_instrument, :num_stave_lines,
+    :bars
 
 
   def initialize(xml)
     @voices = []
-    bars = []
+    @bars = []
     @is_system_staff = xml["IsSystemStaff"].eql?("true")
     @full_instrument_name = xml["FullInstrumentName"]
     @instrument_name = xml["InstrumentName"]
@@ -35,17 +36,61 @@ class Staff
 
     @initial_clef = xml["InitialClefStyleId"];
     puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
-    #puts @family
     (xml/"Bar").each do |bar|
-      #puts bar
-      bars << Bar.new(bar)
-      bars.last.determine_voice_mode
+      @bars << Bar.new(bar)
     end
-    @voices << Voice.new(bars, 1)
+
+  end
+
+  def process
+    verbose("Splitting staves into voices.")
+    @voices << Voice.new(@bars, 1)
     unless @is_system_staff
-      @voices << Voice.new(bars, 2)
+      @voices << Voice.new(@bars, 2)
     end
+
+    verbose("Processing individual voices.")
     voices.each{|voice| voice.process}
+
+    verbose("Determining voice mode for NoteRests.")
+    if @is_system_staff
+      # In the SystemStaff all NoteRests are always in \oneVoice mode
+      voices.each do |voice|
+        # Select non-hidden, non-grace noterests from i-th Bar in voice
+        voice.bars.each do |bar|
+          bar.objects.each do |obj|
+            if obj.is_a?(NoteRest) and
+                not obj.grace and not obj.hidden
+              obj.one_voice = true
+            end
+          end
+        end
+      end
+    else
+      for i in 0...@bars.length
+        objects = []
+        voices.each do |voice|
+          # Select non-hidden, non-grace NotRests and DoubleTremolos from i-th Bar in this voice
+          objects += voice.bars[i].objects.select do |obj|
+            obj.is_a?(DoubleTremolo) or (obj.is_a?(NoteRest) and
+              (not obj.grace) and (not obj.hidden))
+          end
+        end
+
+        voices.each do |voice|
+          voice.bars[i].objects.each do |this|
+            if this.is_a?(NoteRest) and not this.grace and not this.hidden
+              this.one_voice = !objects.find do |other|
+                other.voice != this.voice and not
+                (other.position >= this.position + this.duration or
+                    this.position >= other.position + other.duration) and
+                  !other.hidden
+              end
+            end
+          end
+        end
+      end
+    end
   end
 
   def nr_count

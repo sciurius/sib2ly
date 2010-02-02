@@ -40,7 +40,6 @@ class Bar
         obj.voice == voice or (voice == 1 and obj.voice == 0) or (obj.is_a?(OctavaLine))
       end
       @bar_voice = voice
-      # process
     end
   end
 
@@ -103,7 +102,7 @@ class Bar
         items = @objects.select{|obj| obj.is_a?(SystemTextItem)}
         if !items or items.empty?
           @objects.insert(index, BarRest.new)
-          @objects[index].length = @length
+          @objects[index].duration = @length
           @objects[index].real_duration = @length
         else
           last_nr = nil
@@ -148,20 +147,22 @@ class Bar
     end
   end
 
-  def determine_voice_mode
-    # Determine, for each NoteRest if it's in \oneVoice mode.
-    # A NoteRest is in \oneVoice mode if there are no NoteRests in
-    # other voices coinciding with it.
-    nr_ngnh = @objects.select{|obj|obj.is_a?(NoteRest) and not obj.grace and not obj.hidden}
-    nr_ngnh.each do |this|
-      this.one_voice = !nr_ngnh.find do |other|
-        other.voice != this.voice and not
-        (other.position >= this.position + this.duration or
-		 this.position >= other.position + other.duration) and
-          !other.hidden
-      end
-    end
-  end
+#  def determine_voice_mode
+#    # Determine, for each NoteRest, if it's in \oneVoice mode.
+#    # A NoteRest is in \oneVoice mode if there are no NoteRests in
+#    # other voices coinciding with it.
+#
+#    # Select non-hidden, non-grace noterests
+#    nr_ngnh = @objects.select{|obj|obj.is_a?(NoteRest) and not obj.grace and not obj.hidden}
+#    nr_ngnh.each do |this|
+#      this.one_voice = !nr_ngnh.find do |other|
+#        other.voice != this.voice and not
+#        (other.position >= this.position + this.duration or
+#            this.position >= other.position + other.duration) and
+#          !other.hidden
+#      end
+#    end
+#  end
 
   def assign_texts
     texts = @objects.select{|objt| objt.is_a?(Text)}
@@ -183,9 +184,9 @@ class Bar
       @objects -= @objects.select{|obj| obj.is_a?(KeySignature)}
     end
 
-    fix_empty_bar
+    
 
-    # move KeySIgnature to the beginning of the bar
+    # move KeySignature to the beginning of the bar
     ks = @objects.select{|obj| obj.is_a?(KeySignature)}
     @objects -= ks
     @objects = ks + @objects
@@ -202,7 +203,8 @@ class Bar
     assign_grace_notes
     fix_missing_nr
     assign_texts     # assign text to NoteRests
-    compute_double_tremolo_starts
+    compute_double_tremolo_starts_ends
+    # determine_voice_mode
   end
 
   def assign_grace_notes
@@ -217,21 +219,37 @@ class Bar
   end
 
   # Determine which NoteRests start a double-tremolo
-  def compute_double_tremolo_starts
+  def compute_double_tremolo_starts_ends
     nr = @objects.select{|obj| obj.is_a?(NoteRest)}
     starts = false
+    # For each NoteRest in the bar
+    tremolos = []
     nr.each do |n|
+      # A NoteRest starts a double tremolo if double_tremolos is set and
+      # the previous NoteRest does not start a double tremolo.
       if n.double_tremolos > 0 and !starts
         n.starts_tremolo = starts = true
       else
         starts = n.starts_tremolo = false
+        if n.prev
+          tremolos << DoubleTremolo.new(n.prev.position, n.prev.duration + n.duration)
+        end
       end
-      #puts n.starts_tremolo
     end
+
+    nr.each do |n|
+      # A NoteRest ends a tremolo if the previous NoteRest
+      # starts a double tremolo.
+      if n.prev and n.prev.starts_tremolo
+        n.ends_tremolo  = true
+      end
+    end
+
+    @objects += tremolos
   end
 
   def get_noterest_at(pos)
-    noterests = @objects.select{|obj| (obj.is_a?(NoteRest) and (not obj.grace))  }
+    noterests = @objects.select{|obj| (obj.is_a?(NoteRest) and (not obj.grace))}
     for nr in noterests
       if (nr.position == pos)
         return nr

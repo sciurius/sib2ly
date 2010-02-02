@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'verbose'
+
 def safe_instrument_name(name)
 
   s = name.gsub(" ", "")
@@ -29,6 +31,19 @@ def safe_instrument_name(name)
   # todo: strip numbers
 end
 
+def ms2hms(ms)
+  ms /= 1000
+  seconds = ms % 60
+  minutes = (ms / 60 ) % 60
+  hours = (ms / 3600)
+
+  ret = ""
+  ret = ret + hours.to_s + "h " if hours >= 1
+  ret = ret + minutes.to_s + "m " if minutes >= 1
+  ret = ret + seconds.to_s + "s " if seconds > 0
+  return ret
+end
+  
 def written_name2ly(wn)
   # TODO: quarter-tones
   wn = wn.downcase

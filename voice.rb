@@ -58,6 +58,8 @@ class Voice
         #   end
       end
     end
+
+    # Link NoteRests
     prev_nr = nil
     @bars.each do |bar|
       bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.grace)}.each do |obj|
@@ -207,6 +209,9 @@ class Voice
   end
 
   def process
+
+    @bars.each{|bar| bar.fix_empty_bar}
+
     link_notes
     @fn = first_note
     @bars.each{|bar| bar.process}

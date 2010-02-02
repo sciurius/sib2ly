@@ -17,7 +17,8 @@ require 'barobject'
 
 class NoteRest < BarObject
   attr_accessor :duration, :real_duration, :notes, :articulations, :grace, :acciaccatura, :appogiatura, :tuplets, :ends_tuplet, :tied,
-    :ends_spanners, :begins_spanners, :texts, :texts_before, :one_voice, :prev, :grace_notes, :single_tremolos, :double_tremolos, :starts_tremolo,
+    :ends_spanners, :begins_spanners, :texts, :texts_before, :one_voice, :prev, :grace_notes, :single_tremolos, :double_tremolos,
+    :starts_tremolo, :ends_tremolo,
     :ottavation, :slurred
   def initialize()
     @tied = false
@@ -97,6 +98,12 @@ class NoteRest < BarObject
       s << ">" 
       s << duration2ly(@duration) if need_duration
     end
+
+        if @one_voice
+      s << "^\\markup {ov}"
+    end
+
+    
     return s
   end
 
@@ -270,18 +277,22 @@ class NoteRest < BarObject
   def lowest
     return @notes.sort{|a, b| a.pitch <=> b.pitch}.first;
   end
+
+  # Determine if this NoteRest overlaps temporally with another.
+  def overlaps?(other)
+    not (other.position >= @position + @duration or
+    @position >= other.position + other.duration)
+  end
 end
 
-class DoubleTremolo < NoteRest
-  attr_accessor :first, :second
-  def initialize(first, second)
-    @first, @second = first, second
+class DoubleTremolo < BarObject
+  attr_accessor :duration
+  def initialize(position, duration)
+    @position = position
+    @duration = duration
   end
 
   def to_ly
-    s = ""
-    s << first.to_ly
-    s << second.to_ly
-    s
+    ""
   end
 end
