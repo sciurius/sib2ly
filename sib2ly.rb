@@ -70,14 +70,16 @@ $opt.filename = []
 $opt.verbose = false
 $opt.info = false
 
+logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + "  Sibelius to LilPond translator    (c) 2010 Kirill Sidorov\n\n"
+
 opts = OptionParser.new do |opts|
   script_name = File.basename($0)
 
-  opts.banner = "Usage: #{script_name} [options] filename"
+  opts.banner = logo + "Usage: #{script_name} [options] filename\n\n"
 
   opts.separator ""
   opts.separator "Specific options:"
-  opts.on("-i", "--info", "Display score information but do not convert") do |i|
+  opts.on("-i", "--info", "Display score information only") do |i|
     $opt.info = i;
   end
 
@@ -96,13 +98,15 @@ opts = OptionParser.new do |opts|
 
   # Switch to print the version.
   opts.on_tail("--version", "Show version") do
-    puts VERSION_MAJOR.to_s + "." + VERSION_MINOR.to_s
+    puts logo
     exit
   end
 end
 
 opts.parse!(ARGV)
 $opt.filename = ARGV.pop
+
+puts logo
 
 if !$opt.filename
   puts "ERROR: Invalid input file name."
