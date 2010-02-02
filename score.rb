@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'verbose'
+
 class Score < Translatable
   attr_accessor :staves, :system_staff, :instruments, :staff_groups, :spectra,
     :file_name,
@@ -127,14 +129,14 @@ class Score < Translatable
         if first_nr = bar.objects.find{|obj| obj.is_a?(NoteRest)}
           dur = first_nr.grace_notes.inject(0){|sum, g| sum += g.duration}
           pad = max_grace_length - dur
-          first_nr.grace_notes = fill_with_rests(0, pad, 1) + first_nr.grace_notes
+          first_nr.grace_notes = fill(0, pad, 1) + first_nr.grace_notes
         end
       end
       bar = @system_staff.voices.first[index]
       if first_nr = bar.objects.find{|obj| obj.is_a?(NoteRest)}
         dur = first_nr.grace_notes.inject(0){|sum, g| sum += g.real_duration}
         pad = max_grace_length - dur
-        first_nr.grace_notes = fill_with_rests(0, pad, 1) + first_nr.grace_notes
+        first_nr.grace_notes = fill(0, pad, 1) + first_nr.grace_notes
       end
     end
   end
@@ -165,9 +167,15 @@ class Score < Translatable
     verbose("Translating staves.")
     @staves.each do |staff|
       #puts staff.full_instrument_name
-      ly safe_instrument_name(staff.instrument_name) + " = {"
+      sin = safe_instrument_name(staff.instrument_name)
+      ly sin + " = {"
       staff.to_ly
       ly "}"
+
+      ly sin + "Chords = {"
+      ly "\\chords "
+      ly staff.chords.to_ly
+      ly "} % " + sin + "Chords"
     end
 
     verbose("Translating SystemStaff to LilyPond.")

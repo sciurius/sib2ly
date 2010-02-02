@@ -20,7 +20,7 @@ class NoteRest < BarObject
     :ends_spanners, :begins_spanners, :texts, :texts_before, :one_voice, :prev, :grace_notes, :single_tremolos, :double_tremolos,
     :starts_tremolo, :ends_tremolo,
     :ottavation, :slurred
-  def initialize()
+  def initialize
     @tied = false
     @slurred = 0
     @tuplets = []
@@ -54,6 +54,11 @@ class NoteRest < BarObject
   def NoteRest.new_from_xml(xml)
     nr = NoteRest.new
     nr.initialize_from_xml(xml)
+    nr
+  end
+
+  def NoteRest.copy(other)
+    nr = other.clone
     nr
   end
 
@@ -99,9 +104,9 @@ class NoteRest < BarObject
       s << duration2ly(@duration) if need_duration
     end
 
-        if @one_voice
-      s << "^\\markup {ov}"
-    end
+#        if @one_voice
+#      s << "^\\markup {ov}"
+#    end
 
     
     return s
@@ -286,13 +291,22 @@ class NoteRest < BarObject
 end
 
 class DoubleTremolo < BarObject
-  attr_accessor :duration
-  def initialize(position, duration)
-    @position = position
-    @duration = duration
+  attr_accessor :first, :second, :duration
+  def initialize(first, second)
+    @first = first
+    @second = second
+    @position = @first.position
+    @duration = @first.duration + @second.duration
   end
 
   def to_ly
-    ""
+    s = first.to_ly
+    s << second.to_ly
+    s
+  end
+
+  def process
+    first.process
+    second.process
   end
 end

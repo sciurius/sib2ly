@@ -47,10 +47,10 @@ class BarRest < NoteRest
     s << " " if !@texts.empty?
     f = gcd(@duration, 1024);
     s << grace_to_ly
-    if 1 == voice
-      s << "R1*"
-    else
+    if voice > 1 or @hidden
       s << "s1*"
+    else
+      s << "R1*"
     end
     s << (@duration/f).to_s + "/" + (1024/f).to_s;
     @texts.each{|text| s << text.to_ly}

@@ -13,22 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-require 'verbose'
 
 def safe_instrument_name(name)
-
-  s = name.gsub(" ", "")
-  s = s.gsub("/", "")
-  s = s.gsub("(", "")
-  s = s.gsub(")", "")
-  s = s.gsub(",", "")
-  s = s.gsub("-", "")
-  s = s.gsub("+", "")
-  s = s.gsub(".", "")
+  s = name
   DIGITS.each{|key,value| s = s.gsub(key, value)}
-
+  s = s.gsub(/[^A-Za-z.\-]/, '')
   return s
-  # todo: strip numbers
 end
 
 def ms2hms(ms)
@@ -120,13 +110,17 @@ def get_tremolo_duration(d, trem)
   end
 end
 
-def fill_with_rests(pos, duration, voice)
+def fill(pos, duration, voice, noterest = nil)
   nrs = []
   # creates an array of NoteRests to fill a duration
   (0..10).each do |i|
     pow = 2**i
     if duration & pow != 0
-      nr = NoteRest.new
+      if not noterest
+        nr = NoteRest.new
+      else
+        nr = NoteRest.copy(noterest)
+      end
       nr.position = pos
       pos += pow
       nr.duration = pow

@@ -17,11 +17,11 @@ PREAMBLE = "\\version \"2.12.2\"\n"+
   "#(set-global-staff-size 11)\n"+
 	"\\layout\n"+
 	"{\n"+
-	"  \\context\n"+
-	"  {\n"+
-	"    \\RemoveEmptyStaffContext\n"+
-	"    \\override VerticalAxisGroup #'remove-first = ##t\n"+
-	"  }\n"+
+#	"  \\context\n"+
+#	"  {\n"+
+#	"    \\RemoveEmptyStaffContext\n"+
+#	"    \\override VerticalAxisGroup #'remove-first = ##t\n"+
+#	"  }\n"+
 	"  \\context\n"+
 	"  {\n"+
 	"    \\RemoveEmptyRhythmicStaffContext\n"+

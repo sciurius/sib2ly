@@ -15,11 +15,19 @@
 
 class Voice
   attr_accessor :bars, :spanners, :voice, :fn
-  def initialize(bars, voice)
+  def initialize(voice)
     @voice = voice
     @bars = []
-    @nr_count = 0
-    bars.each{|bar| @bars << Bar.new(bar, voice)}
+    @nr_count = 0    
+  end
+
+  def Voice.copy(voice, bars, &fun)
+    v = Voice.new(voice)
+    v.voice = voice
+    bars.each do |bar|
+      v.bars << Bar.copy(bar, fun)
+    end
+    v
   end
 
   def [](index)
@@ -210,7 +218,7 @@ class Voice
 
   def process
 
-    @bars.each{|bar| bar.fix_empty_bar}
+    @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
     link_notes
     @fn = first_note

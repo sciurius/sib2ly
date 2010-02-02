@@ -14,37 +14,39 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class Bar
-  attr_accessor :objects, :length, :number, :system_staff, :time_signature, :nr_count, :bar_voice
-  def initialize(*args)
-    case args.size
-    when 1
-      xml = args.first
-      @length = xml["Length"].to_i;
-      @number = xml["BarNumber"].to_i;
-      @system_staff = xml.parent.name.eql?("SystemStaff")
-      @objects = [];
-      xml.children.each do |object|
-        if eval("defined? " + object.name) && Class === eval(object.name)
-          #puts object.name
-          @objects << Object::const_get(object.name).new_from_xml(object)
-        end
-      end
-    when 2
-      bar = args.first
-      voice = args[1]
-      @objects = []
-      @system_staff = bar.system_staff
-      @length = bar.length
-      @number = bar.number
-      @objects += bar.objects.select do |obj|
-        obj.voice == voice or (voice == 1 and obj.voice == 0) or (obj.is_a?(OctavaLine))
-      end
-      @bar_voice = voice
-    end
+  attr_accessor :objects, :length, :number, :system_staff, :time_signature,
+    :nr_count, :bar_voice
+  def initialize(length, bar_voice, number, system_staff)
+    @length, @bar_voice, @number, @system_staff = length, bar_voice, number, system_staff
+    @objects = []
   end
 
+  # Create a bar populated with object of a specific objects
+  # taken from another bar.
+  def Bar.copy(other, fun)
+    bar = Bar.new(other.length, nil, other.number, other.system_staff)
+    bar.objects += other.objects.select do |obj|
+      # obj.voice == voice or (voice == 1 and obj.voice == 0) or (obj.is_a?(OctavaLine))
+      fun.call(obj)
+    end
+    bar
+  end
+
+  def Bar.new_from_xml(xml)
+    bar = Bar.new(xml["Length"].to_i,
+      1,
+      xml["BarNumber"].to_i,
+      xml.parent.name.eql?("SystemStaff"))
+    xml.children.each do |object|
+      if eval("defined? " + object.name) && Class === eval(object.name)
+        bar.objects << Object::const_get(object.name).new_from_xml(object)
+      end
+    end
+    bar
+  end
+
+  # If the bar is musically empty (e.g. bar rest)
   def is_empty?
-    # If the bar is musically empty (e.g. bar rest)
     @objects.length == 1 and @objects.first.is_a?(BarRest)
   end
 
@@ -71,8 +73,6 @@ class Bar
   end
 
   def fix_missing_nr
-    #return
-    #obj = @objects.select{|obj| obj.is_a?(NoteRest)}
     last_end = 0
     fixed = []
     voice = nil
@@ -80,19 +80,19 @@ class Bar
       if obj.is_a?(NoteRest)
         voice = obj.voice
         if last_end and obj.position > last_end + 1 # extra 1 for rounding errors when in tuplet
-          fixed += fill_with_rests(last_end, obj.position - last_end, voice)
+          fixed += fill(last_end, obj.position - last_end, voice)
         end
         last_end = obj.position + obj.real_duration
       end
       fixed << obj
     end
     if last_end > 0 and last_end + 1 < @length
-      fixed += fill_with_rests(last_end, @length  - last_end, voice)
+      fixed += fill(last_end, @length  - last_end, voice)
     end
     @objects = fixed
   end
 
-  def fix_empty_bar
+  def fix_empty_bar(voice)
     nr = @objects.select{|obj| obj.is_a?(NoteRest)}
     if nr.empty? # there are no NoteRests
       unless @objects.find{|obj| obj.is_a?(BarRest)} # and no BarRests
@@ -104,6 +104,8 @@ class Bar
           @objects.insert(index, BarRest.new)
           @objects[index].duration = @length
           @objects[index].real_duration = @length
+          @objects[index].voice = voice# @bar_voice
+          @objects[index].hidden = true
         else
           last_nr = nil
           items.each_with_index do |i, index|
@@ -147,22 +149,22 @@ class Bar
     end
   end
 
-#  def determine_voice_mode
-#    # Determine, for each NoteRest, if it's in \oneVoice mode.
-#    # A NoteRest is in \oneVoice mode if there are no NoteRests in
-#    # other voices coinciding with it.
-#
-#    # Select non-hidden, non-grace noterests
-#    nr_ngnh = @objects.select{|obj|obj.is_a?(NoteRest) and not obj.grace and not obj.hidden}
-#    nr_ngnh.each do |this|
-#      this.one_voice = !nr_ngnh.find do |other|
-#        other.voice != this.voice and not
-#        (other.position >= this.position + this.duration or
-#            this.position >= other.position + other.duration) and
-#          !other.hidden
-#      end
-#    end
-#  end
+  #  def determine_voice_mode
+  #    # Determine, for each NoteRest, if it's in \oneVoice mode.
+  #    # A NoteRest is in \oneVoice mode if there are no NoteRests in
+  #    # other voices coinciding with it.
+  #
+  #    # Select non-hidden, non-grace noterests
+  #    nr_ngnh = @objects.select{|obj|obj.is_a?(NoteRest) and not obj.grace and not obj.hidden}
+  #    nr_ngnh.each do |this|
+  #      this.one_voice = !nr_ngnh.find do |other|
+  #        other.voice != this.voice and not
+  #        (other.position >= this.position + this.duration or
+  #            this.position >= other.position + other.duration) and
+  #          !other.hidden
+  #      end
+  #    end
+  #  end
 
   def assign_texts
     texts = @objects.select{|objt| objt.is_a?(Text)}
@@ -204,7 +206,15 @@ class Bar
     fix_missing_nr
     assign_texts     # assign text to NoteRests
     compute_double_tremolo_starts_ends
+    sort_objects
     # determine_voice_mode
+  end
+
+  # Sort BarObjects by position
+  def sort_objects
+    @objects.sort! do |x, y|
+      x.position <=> y.position
+    end
   end
 
   def assign_grace_notes
@@ -221,6 +231,9 @@ class Bar
   # Determine which NoteRests start a double-tremolo
   def compute_double_tremolo_starts_ends
     nr = @objects.select{|obj| obj.is_a?(NoteRest)}
+
+    num_starts = 0
+    num_ends   = 0
     starts = false
     # For each NoteRest in the bar
     tremolos = []
@@ -229,11 +242,9 @@ class Bar
       # the previous NoteRest does not start a double tremolo.
       if n.double_tremolos > 0 and !starts
         n.starts_tremolo = starts = true
+        num_starts = num_starts + 1
       else
         starts = n.starts_tremolo = false
-        if n.prev
-          tremolos << DoubleTremolo.new(n.prev.position, n.prev.duration + n.duration)
-        end
       end
     end
 
@@ -242,10 +253,28 @@ class Bar
       # starts a double tremolo.
       if n.prev and n.prev.starts_tremolo
         n.ends_tremolo  = true
+        num_ends = num_ends + 1
+        tremolos << DoubleTremolo.new(n.prev, n)
       end
     end
 
+    # Check if the number of tremolo starts equals the number of ends
+    unless num_starts == num_ends
+      puts "WARNING! I have found a double tremolo that does not have ``the second part'' to it, in bar " + @number.to_s
+      puts "Check, in the original Sibelius score, if some notes or rests in this bar have an incomlete tremolo."
+      # This bug occurs in e.g. /Example Scores/Hebrides.sib
+    end
+
+    # Delete all notes that are in double tremolos from the bar
+    tremolos.each do |trem|
+      @objects.delete(trem.first)
+      @objects.delete(trem.second)
+    end
+    
+    # Add tremolos to the bar instead
     @objects += tremolos
+
+
   end
 
   def get_noterest_at(pos)

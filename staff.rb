@@ -13,16 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'voicechords'
+
 class Staff < Translatable
   attr_accessor :family, :is_system_staff, :instrument_name,
     :full_instrument_name, :short_instrument_name, :initial_clef,
     :initial_style_id, :voices, :num_staves_in_same_instrument, :num_stave_lines,
-    :bars
+    :bars, :chords
 
 
   def initialize(xml)
     @voices = []
     @bars = []
+    @chords = []
     @is_system_staff = xml["IsSystemStaff"].eql?("true")
     @full_instrument_name = xml["FullInstrumentName"]
     @instrument_name = xml["InstrumentName"]
@@ -37,21 +40,21 @@ class Staff < Translatable
     @initial_clef = xml["InitialClefStyleId"];
     puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
     (xml/"Bar").each do |bar|
-      @bars << Bar.new(bar)
+      @bars << Bar.new_from_xml(bar)
     end
-
   end
 
-  def process
+  def split_into_voices
     verbose("Splitting staves into voices.")
-    @voices << Voice.new(@bars, 1)
+    @voices << Voice.copy(1, @bars) {|obj| obj.voice == 1 or obj.voice == 0 or obj.is_a?(OctavaLine)}
     unless @is_system_staff
-      @voices << Voice.new(@bars, 2)
+      @voices << Voice.copy(2, @bars) {|obj| obj.voice == 2 or obj.is_a?(OctavaLine)}
     end
+    # Create a new voice for chords and populate it with chord symbols
+    @chords = VoiceChords.copy(1, @bars) {|obj| obj.is_a?(Text) and obj.style_id == "text.staff.space.chordsymbol"}
+  end
 
-    verbose("Processing individual voices.")
-    voices.each{|voice| voice.process}
-
+  def determine_voice_mode
     verbose("Determining voice mode for NoteRests.")
     if @is_system_staff
       # In the SystemStaff all NoteRests are always in \oneVoice mode
@@ -73,7 +76,7 @@ class Staff < Translatable
           # Select non-hidden, non-grace NotRests and DoubleTremolos from i-th Bar in this voice
           objects += voice.bars[i].objects.select do |obj|
             obj.is_a?(DoubleTremolo) or (obj.is_a?(NoteRest) and
-              (not obj.grace) and (not obj.hidden))
+                (not obj.grace) and (not obj.hidden))
           end
         end
 
@@ -93,6 +96,17 @@ class Staff < Translatable
     end
   end
 
+  def process
+    split_into_voices
+    
+    verbose("Processing individual voices.")
+    voices.each{|voice| voice.process}
+    chords.process
+
+    
+    determine_voice_mode
+  end
+
   def nr_count
     @voices.inject(0){|sum, v| sum += v.nr_count}
   end
@@ -107,7 +121,6 @@ class Staff < Translatable
   end
 
   def to_ly
-
     ly clef2ly(@initial_clef)
     if polyphonic
       ly " <<"
@@ -123,6 +136,7 @@ class Staff < Translatable
     else
       ly voices.first.to_ly
     end
+
     # return s
   end
 end

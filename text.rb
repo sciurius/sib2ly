@@ -36,6 +36,7 @@ class Text < BarObject
   def initialize_from_xml(xml)
     super(xml)
     @text = xml["Text"].split("~").first # get visible part of text
+    @text = "" unless @text
     @style_id = xml["StyleId"]
   end
 
@@ -61,6 +62,8 @@ class Text < BarObject
         s << "^"
       end
       s << "\\markup \{\\italic \{" + @text + "\}\}"
+    when "text.staff.space.chordsymbol"
+      s << "^\\markup \{\"" + @text + "\"\}"
     end
     return s
   end

@@ -31,22 +31,27 @@ class Instrument
     case staves.length
     when 1
       for staff in @staves
+        sin = safe_instrument_name(staff.instrument_name)
         case staff.num_stave_lines
         when 1
+          s << "    \\" + sin + "Chords\n"
           s << "    \\new RhythmicStaff\n    {\n"
           s << "      \\set RhythmicStaff.instrumentName = \"" + staff.full_instrument_name + " \"\n"
           s << "      \\set RhythmicStaff.shortInstrumentName = \"" + staff.short_instrument_name + " \"\n"
-          s << "      << \\global \\" + safe_instrument_name(staff.instrument_name) + " >>"
+          s << "      << \\global \\" + sin + " >>"
           s << "\n    }\n"
         when 5
+          s << "    \\" + sin + "Chords\n"
           s << "    \\new Staff\n    {\n"
           s << "      \\set Staff.instrumentName = \"" + staff.full_instrument_name + " \"\n"
           s << "      \\set Staff.shortInstrumentName = \"" + staff.short_instrument_name + " \"\n"
-          s << "      << \\global \\" + safe_instrument_name(staff.instrument_name) + " >>"
+          s << "      << \\global \\" + sin + " >>"
           s << "\n    }\n"
         end
       end
     when 2
+      sin = safe_instrument_name(staves.first.instrument_name)
+      s << "    \\" + sin + "Chords\n"
       s << "    \\new PianoStaff\n"
       s << "    {\n"
       s << "      \\set PianoStaff.instrumentName = \"" + staves.first.full_instrument_name + " \"\n"
