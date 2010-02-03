@@ -63,7 +63,7 @@ class Text < BarObject
       end
       s << "\\markup \{\\italic \{" + @text + "\}\}"
     when "text.staff.space.chordsymbol"
-      s << "^\\markup \{\"" + @text + "\"\}"
+      #s << "^\\markup \{\"" + @text + "\"\}"
     end
     return s
   end
