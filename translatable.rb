@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class Translatable
-  def from_xml
+  def new_from_xml
 
   end
   def process

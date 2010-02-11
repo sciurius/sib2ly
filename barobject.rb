@@ -13,17 +13,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-class BarObject
-  attr_accessor  :position, :voice, :hidden, :dx, :dy
+require 'translatable'
+
+class BarObject < Translatable
+  attr_accessor  :position, :voice, :hidden, :dx, :dy, :bar
   def initialize
-    @position = 0
+    @position, @voice, @hidden, @dx, @dy, @bar = 0, 1, false, 0, 0, nil
+  end
+
+  def priority
+    0
   end
 
   def initialize_from_xml(xml)
-    @position = xml["position"].to_i;
-    @voice = xml["voicenumber"].to_i;
-    @hidden = xml["hidden"].eql?("true");
-    @dx = xml["dx"].to_i;
-    @dy = xml["dy"].to_i;
+    @position   = xml["position"].to_i;
+    @voice      = xml["voicenumber"].to_i;
+    @hidden     = xml["hidden"].eql?("true");
+    @dx         = xml["dx"].to_i;
+    @dy         = xml["dy"].to_i;
   end
 end

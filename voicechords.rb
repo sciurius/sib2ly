@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'chord'
+require 'voice'
 
 class VoiceChords < Voice
   def process
@@ -22,19 +23,15 @@ class VoiceChords < Voice
     end
   end
 
-  # TODO Make this into a module, since it is used in Voice also
-  def VoiceChords.copy(voice, bars, &fun)
-    v = VoiceChords.new(voice)
-    v.voice = voice
-    bars.each do |bar|
-      v.bars << Bar.copy(bar, fun)
+  def chord_count
+    @bars.inject(0) do |sum, bar|
+      sum += bar.objects.select{|obj| obj.is_a?(Chord) and obj.prefix != "s"}.length
     end
-    v
   end
-
+  
   def create_grid(bar)
     processed = []
-#    return if bar.objects.empty?
+    #    return if bar.objects.empty?
     if bar.objects.empty?
       processed << Chord.new("s", "", 0, bar.length)
     else
@@ -48,10 +45,12 @@ class VoiceChords < Voice
         else
           len = bar.objects[i + 1].position - obj.position
         end
+
         prefix, postfix = translate_chord_to_ly(obj.text)
         processed << Chord.new(prefix, postfix, obj.position, len)
       end
     end
-    bar.objects = processed
+    bar.clear
+    bar.add(processed)
   end
 end

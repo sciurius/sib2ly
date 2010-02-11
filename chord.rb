@@ -22,7 +22,7 @@ class Chord < BarObject
 
   def to_ly
     s = @prefix
-    f = gcd(@duration, 1024);
+    f = @duration.gcd(1024);
     s << "1"
     s << "*"
     s << (@duration/f).to_s + "/" + (1024/f).to_s;

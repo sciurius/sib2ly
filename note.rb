@@ -14,18 +14,38 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class Note
-  attr_accessor :pitch, :diatonic_pitch, :written_pitch, :name, :written_name, :previous_note, :tied, :ottavation
+  attr_reader :pitch, :diatonic_pitch, :written_pitch, :name, :written_name,
+    :previous_note, :ottavation, :bracketed, :accidental,
+    :written_accidental, :written_diatonic_pitch
+	attr_accessor :tied
   def initialize(xml)
     @pitch = xml["Pitch"].to_i;
+    @accidental = xml["Accidental"].to_i;
+    @written_accidental = xml["WrittenAccidental"].to_i;
     @diatonic_pitch = xml["DiatonicPitch"].to_i;
     @written_pitch = xml["WrittenPitch"].to_i;
     @written_name = xml["WrittenName"];
     @name = xml["Name"];
     @tied = xml["Tied"].eql?("true");
+    @bracketed = xml["Bracketed"].eql?("true");
+    @written_diatonic_pitch = pitch2diatonic(@written_pitch, @written_name)
   end
 
+	def transposition
+		@pitch - @written_pitch
+	end
+
+	def previous_note=(note)
+		assert(((nil == note) or note.is_a?(Note)), "Trying to assign a non-Note object to previous_note")
+		@previous_note = note
+	end
+
   def to_ly
-    s = written_name2ly(@name)
+    s = ""
+    if @bracketed
+      s << '\parenthesize '
+    end
+    s << written_name2ly(@name)
     if @previous_note
       s << get_octave(@previous_note.diatonic_pitch, @diatonic_pitch)
     end
@@ -34,4 +54,6 @@ class Note
     end
     return s
   end
+
+  alias to_s to_ly
 end

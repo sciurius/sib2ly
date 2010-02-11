@@ -13,6 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'transposition'
+require 'relative'
+require 'timesignature'
+
 class Voice
   attr_accessor :bars, :spanners, :voice, :fn
   def initialize(voice)
@@ -21,13 +25,13 @@ class Voice
     @nr_count = 0    
   end
 
-  def Voice.copy(voice, bars, &fun)
-    v = Voice.new(voice)
+  def self.filter_copy(voice, bars, &fun)
+    v = self.new(voice)
     v.voice = voice
     bars.each do |bar|
       v.bars << Bar.copy(bar, fun)
     end
-    v
+    v 
   end
 
   def [](index)
@@ -56,7 +60,7 @@ class Voice
 
     @bars.each do |bar|
       #bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) and (not obj.grace)}.each do |obj|
-      bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) }.each do |obj|
+      bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) and (not obj.hidden)}.each do |obj|
         obj.notes.each do |note|
           note.previous_note = prev_note
           prev_note = note
@@ -66,7 +70,69 @@ class Voice
         #   end
       end
     end
+  end
 
+	def get_noterests
+		noterests = []
+		@bars.each do |bar|
+			noterests += bar.objects.select{|obj| obj.is_a?(NoteRest)}
+		end
+		noterests
+	end
+
+	def detect_transpositions
+		noterests = get_noterests
+		nonrests = noterests.select {|obj| not obj.is_rest?}
+		return if nonrests.empty?
+		nonrests.each do |nr|
+			prev = nr.prev_non_rest
+			if prev
+				if prev.transposition != nr.transposition
+					tb = TranspositionBegin.new(nr.transposition)
+					tb.position = nr.position
+					te = TranspositionEnd.new
+					te.position = prev.position_after
+					rb = RelativeBegin.new(nr.lowest)
+					rb.position = nr.position
+					re = RelativeEnd.new
+					re.position = prev.position_after
+					prev.bar.add(te)
+					nr.bar.add(tb)
+					prev.bar.add(rb)
+					nr.bar.add(re)
+
+#					prev.ends_transposition = true
+#					nr.begins_transposition = true
+				else
+#					prev.ends_transposition = false
+#					nr.begins_transposition = false
+				end
+			else
+				# This is the first non-rest. It does not end a transposition.
+				# It or the first NoteRest begins a transposition.
+				# nr.begins_transposition = true
+#				noterests.first.begins_transposition = true
+				fn = noterests.first
+				tb = TranspositionBegin.new(nonrests.first.transposition)
+				tb.position = fn.position
+				rb = RelativeBegin.new(nonrests.first.lowest)
+				rb.position = fn.position
+				fn.bar.add(tb)
+				fn.bar.add(rb)
+#				nr.ends_transposition = false
+			end
+		end
+#		noterests.last.ends_transposition = true
+		ln = noterests.last
+		te = TranspositionEnd.new
+		te.position = ln.position_after
+		re = RelativeEnd.new
+		re.position = ln.position_after
+		ln.bar.add(te)
+		ln.bar.add(re)
+	end
+
+  def link_noterests
     # Link NoteRests
     prev_nr = nil
     @bars.each do |bar|
@@ -82,13 +148,6 @@ class Voice
     slurs = spanners.select{|sp| sp.is_a?(Slur)}
     slurs.each do |this|
       slurs.each do |other|
-
-        #        tbb = this.start_bar_number
-        #        tbe = this.end_bar_number
-        #        obb = other.start_bar_number
-        #        obe = other.end_bar_number
-        #        tb = this.nr_begin.position
-        #        te =
         if this != other and
             (
             (
@@ -108,6 +167,7 @@ class Voice
     end
   end
 
+	# For each NoteRest, count under how many slurs it is
   def detect_slurred_noterests(spanners)
     slurs = spanners.select{|sp| sp.is_a?(Slur)}
     slurs.each do |slur|
@@ -116,9 +176,10 @@ class Voice
     end
   end
 
+	# Return an array of NoteRests that are under a given spanner
   def noterests_under_spanner(sp)
     result = []
-    bb = bars[sp.start_bar_number-1..sp.end_bar_number-1] # bars affected by ottava line
+    bb = bars[sp.start_bar_number-1..sp.end_bar_number-1] # bars affected by the spanner 
     bb.each do |b|
       note_rests = b.objects.select{|obj| obj.is_a?(NoteRest)}
       note_rests.each do |nr|
@@ -146,13 +207,13 @@ class Voice
   end
 
   def get_spanners
-    spanners = []
+    sp = []
     @bars.each do |bar|
-      spanners += bar.objects.select do |obj|
+      sp += bar.objects.select do |obj|
         obj.is_a?(Spanner) and !obj.hidden
       end
     end
-    spanners
+    sp
   end
 
   def assign_spanners
@@ -162,7 +223,7 @@ class Voice
     # Find ottava lines
     ottavas = @spanners.select{|sp| sp.is_a?(OctavaLine)}
 
-    # Sort spanners: ottava lines have lowest precedence
+    # Sort spanners: ottava lines have the lowest priority
     @spanners -= ottavas
 
     @spanners.each do |sp|
@@ -234,27 +295,60 @@ class Voice
     @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
     link_notes
+    link_noterests
     @fn = first_note
     @bars.each{|bar| bar.process}
+    link_noterests
     #count_nr
 
     assign_spanners
     assign_time_signatures
+    handle_start_repeat_barlines
+		detect_transpositions
     #puts @nr_count
   end
 
+  # Sibelius reports the "start repeat" barline at the end of the bar from which
+  # the repeat begins. We need to move such barlines to the preceding bars.
+  def handle_start_repeat_barlines
+    #    @bars.each_with_index do |bar, idx|
+    #      blsr = bar.objects.select {|obj| (obj.is_a?(SpecialBarline) and obj.barline_type == "StartRepeat")}
+    #      if !blsr.empty?
+    #        blsr.each do |bl|
+    #
+    #        end
+    #      end
+    #    end
+  end
+
+
   def to_ly
-    # fn = first_note
-    if fn
-      rel = "\\relative c" + get_octave(35-7, fn.diatonic_pitch - (7 * ((fn.pitch - fn.written_pitch)/12)));
-    else
-      rel = ""
+    #    s = ""
+    #    if fn
+    #      #diatonic = pitch2diatonic(fn.written_pitch, fn.written_name)
+    #      #rel = "\\relative c" + get_octave(35-7, fn.diatonic_pitch - (7 * ((fn.pitch - fn.written_pitch)/12)));
+    #      rel = "\\relative c" + get_octave(35-7, fn.written_diatonic_pitch);
+    #    else
+    #      rel = ""
+    #    end
+    #    if rel.empty?
+    #      s << "{\n"
+    #    else
+    #      s << rel + " {\n"
+    #    end
+    #    @bars.each do |bar|
+    #      s << bar.to_ly;
+    #    end
+    #    s << "}"
+    #    s << " % " + rel if !rel.empty?
+    #    return s
+
+    v = brackets("{\n", "}") do |s|
+      @bars.each do |bar|
+        s << bar.to_ly;
+      end
+      s
     end
-    s = rel + "{"
-    @bars.each do |bar|
-      s << bar.to_ly;
-    end
-    s << "}"
-    return s
+    v
   end
 end

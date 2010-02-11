@@ -13,13 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'voice'
 require 'voicechords'
+require 'voicelyrics'
+require 'bar'
+require 'clef'
+require 'spanners'
+require 'text'
 
 class Staff < Translatable
   attr_accessor :family, :is_system_staff, :instrument_name,
     :full_instrument_name, :short_instrument_name, :initial_clef,
     :initial_style_id, :voices, :num_staves_in_same_instrument, :num_stave_lines,
-    :bars, :chords
+    :bars, :chords, :number, :lyrics
 
 
   def initialize(xml)
@@ -31,27 +37,53 @@ class Staff < Translatable
     @instrument_name = xml["InstrumentName"]
     @short_instrument_name = xml["ShortInstrumentName"]
     @initial_style_id = xml["InitialStyleId"]
-
     @num_staves_in_same_instrument = xml["NumStavesInSameInstrument"].to_i
     @num_stave_lines =  xml["NumStaveLines"].to_i
-
     @family = @initial_style_id.split(".")[1] if @initial_style_id
-
     @initial_clef = xml["InitialClefStyleId"];
-    puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
+
+		return if $opt.list # Do not proceed to read bars
+    
+		puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
     (xml/"Bar").each do |bar|
       @bars << Bar.new_from_xml(bar)
     end
   end
 
+  # Return the i-th bar
+  def [](i)
+    @bars[i]
+  end
+
+	# Make a valid LilyPond identifier from the instrument name.
+  def safe_instrument_name
+    s = @instrument_name
+    DIGITS.each{|key,value| s = s.gsub(key, value)}
+    s = s.gsub(/[^A-Za-z]/, '')
+    # If we are given a staff number, append it as a Roman numeral
+    s = "staff" + roman(@number) + s if @number
+    s
+  end
+
   def split_into_voices
     verbose("Splitting staves into voices.")
-    @voices << Voice.copy(1, @bars) {|obj| obj.voice == 1 or obj.voice == 0 or obj.is_a?(OctavaLine)}
+		# Create a new voice for lyrics and populate it with LyricItems
+    @lyrics = VoiceLyrics.filter_copy(1, @bars) {|obj| obj.is_a?(LyricItem)}
+		@bars.each do |bar|
+			li = bar.objects.select {|obj| obj.is_a?(LyricItem)}
+			bar.remove(li)
+		end
+
+    @voices << Voice.filter_copy(1, @bars) {|obj| obj.voice == 1 or obj.voice == 0 or obj.is_a?(OctavaLine)}
     unless @is_system_staff
-      @voices << Voice.copy(2, @bars) {|obj| obj.voice == 2 or obj.is_a?(OctavaLine)}
+      @voices << Voice.filter_copy(2, @bars) {|obj| obj.voice == 2 or obj.is_a?(OctavaLine)}
     end
+		ic = Clef.new(@initial_clef)
+		ic.position = 0
+		@voices.first[0].add(ic)
     # Create a new voice for chords and populate it with chord symbols
-    @chords = VoiceChords.copy(1, @bars) {|obj| obj.is_a?(Text) and obj.style_id == "text.staff.space.chordsymbol"}
+    @chords = VoiceChords.filter_copy(1, @bars) {|obj| (obj.is_a?(Text) and obj.style_id == "text.staff.space.chordsymbol")}
+
   end
 
   def determine_voice_mode
@@ -97,15 +129,13 @@ class Staff < Translatable
   end
 
   def process
-
         
     split_into_voices
     
     verbose("Processing individual voices.")
     voices.each{|voice| voice.process}
     chords.process
-
-    
+    lyrics.process
     determine_voice_mode
   end
 
@@ -122,23 +152,43 @@ class Staff < Translatable
     false
   end
 
-  def to_ly
-    ly clef2ly(@initial_clef)
-    if polyphonic
-      ly " <<"
-      voices.each_with_index do |voice, index|
-        ly "\\new Voice {"
-        if index > 0
-          ly VOICE[index+1]
-        end
-        ly voice.to_ly
-        ly "}"
-      end
-      ly "\n>>"
-    else
-      ly voices.first.to_ly
+	# Is there something to typeset in chord mode?
+  def chords_present?
+    if @chords and @chords.chord_count > 0
+      return true
     end
+    false
+  end
 
-    # return s
+	# Is there something to typeset in lyrics mode?
+	def lyrics_present?
+		return (@lyrics and (@lyrics.lyrics_count > 0))
+	end
+
+	VOICE_NAMES = {
+		1 => 'one',
+		2 => 'two',
+		3 => 'three',
+		4 => 'four'
+	}
+  def to_ly
+    # s = clef2ly(@initial_clef)
+		s = ""	
+    if polyphonic or lyrics_present?
+      v = brackets(" <<", "\n>>") do |ss|
+        voices.each_with_index do |voice, index|
+          ss << brackets("\n\\new Voice = \"#{VOICE_NAMES[index + 1]}\" {", "}") do |sss|
+            sss << VOICE[index+1] if index > 0
+            sss << voice.to_ly
+          end
+        end
+				ss << "\n\\" + safe_instrument_name + "Lyrics" if lyrics_present?
+        ss
+      end
+      s << v
+    else
+      s << voices.first.to_ly
+    end
+    s
   end
 end

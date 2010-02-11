@@ -14,6 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'verbose'
+require 'translatable'
+require 'staff'
+require 'systemtextitem'
+require 'instrument'
+require 'staffgroup'
 
 class Score < Translatable
   attr_accessor :staves, :system_staff, :instruments, :staff_groups, :spectra,
@@ -32,7 +37,7 @@ class Score < Translatable
     s << "Number of staves:    " + @staves.length.to_s + "\n"
     s << "Number of bars:      " + @system_staff.voices.first.bars.length.to_s + "\n"
     s << "Number of NoteRests: " + nr_count.to_s + "\n"
-    s << "File name:           " + @file_name + "\n"
+    s << "File name:           " + @file_name +  "\n"
     s << "Score duration:      " + ms2hms(@score_duration) + "\n"
     s << "Composer:            " + @composer + "\n" if @composer and !@composer.empty?
     s << "Lyricist:            " + @lyricist + "\n" if @lyricist and !@lyricist.empty?
@@ -67,19 +72,58 @@ class Score < Translatable
     @staff_groups =[]
     @instruments=[]
     verbose("Creating staves from XML.")
-    (xml/"Staff").each do |staff|
+    (xml/"Staff").each_with_index do |staff, number|
       @staves << Staff.new(staff)
+      @staves.last.number = number + 1
     end
 
     verbose("Creating SystemStaff from XML.")
     @system_staff = Staff.new((xml/"SystemStaff").first)
 
+    verbose "Detecting score parameters."
+    detect_info
+  end
 
-    puts ""
-    #process
+  # Do substitution of Sibelius variables, e.g. $Composer
+  def substitute_vars(text, variable, value)
+    value = "" unless value
+    text.gsub!(/\\\$#{variable}\\/i, value)
+    text.gsub!(/\\\$[a-zA-Z]*\\/i, "")
+    text
+  end
+
+	# Output the list of staves and corresponding instrument names.
+	def list_staves
+		@staves.each_with_index do |staff, idx|
+			puts "Staff #{idx + 1}: #{staff.full_instrument_name}"
+		end
+	end
+
+  # Detect score information: title, composer etc. from page-aligned
+  # SystemTextItems in the SystemStaff
+  def detect_info
+    @system_staff.bars.each do |bar|
+      sti = bar.objects.select {|obj| obj.is_a?(SystemTextItem)}
+      sti.each do |pa|
+        match = /^text.system.page_aligned.(title|composer|subtitle|lyricist)$/.match(pa.style_id)
+        if match
+          case match[1]
+          when "title"
+            @title = substitute_vars(pa.text, "TITLE", @title)
+          when "subtitle"
+            @subtitle = substitute_vars(pa.text, "SUBTITLE", @subtitle)
+          when "composer"
+            @composer = substitute_vars(pa.text, "COMPOSER", @composer)
+          when "lyricist"
+            @lyricist = substitute_vars(pa.text, "LYRICIST", @lyricist)
+          end
+        end
+      end
+    end
   end
 
   def process
+    key_signatures_to_staves
     verbose("Applying magic to staves.")
     @staves.each do |staff|
       staff.process
@@ -141,6 +185,20 @@ class Score < Translatable
     end
   end
 
+  # Move key signatures from the SystemStaff to Staves
+  def key_signatures_to_staves
+    @system_staff.bars.each_with_index do |ssbar, idx|
+      key_signatures = ssbar.objects.select{|obj| obj.is_a?(KeySignature)}
+      key_signatures.each do |ks|
+        @staves.each do |staff|
+          bar = staff.bars[idx]
+          #bar.insert(ks, ks.position)
+          bar.add(ks)
+        end
+      end
+      ssbar.remove(key_signatures)
+    end
+  end
 
   def detect_title_etc
     st = @system_staff.voices.first.bars.first.objects.find{|obj| obj.is_a?(SystemTextItem) and obj.style_id == 'text.system.page_aligned.title'}
@@ -155,33 +213,55 @@ class Score < Translatable
     @staves.inject(0){|sum, st| sum += st.nr_count}
   end
 
+
+
   def to_ly
     verbose("Translating Score to LilyPond.")
     ly PREAMBLE
-    ly "\\header"
-    ly "{"
-    ly '  title = "' + escape_quotes(title) + "\"" if title
-    ly '  subtitle = "' + escape_quotes(subtitle) + "\"" if subtitle
-    ly '} % Header'
+
+    header = "\\header " + brackets("{\n", "\n} % header") do |s|
+      s << '  title    = "' + escape_quotes(@title) + "\"\n"    if @title
+      s << '  subtitle = "' + escape_quotes(@subtitle) + "\"\n" if @subtitle
+      s << '  composer = "' + escape_quotes(@composer) + "\"\n" if @composer
+      s << '  poet     = "' + escape_quotes(@lyricist) + "\""   if @lyricist
+    end
+    ly header
+		ly
 
     verbose("Translating staves.")
     @staves.each do |staff|
       #puts staff.full_instrument_name
-      sin = safe_instrument_name(staff.instrument_name)
-      ly sin + " = {"
-      staff.to_ly
-      ly "}"
+      sin = staff.safe_instrument_name
 
-      ly sin + "Chords = {"
-      ly "\\chords "
-      ly staff.chords.to_ly
-      ly "} % " + sin + "Chords"
+#      ly sin + " = {"
+#      staff.to_ly
+#      ly "} % " + sin + "\n"
+
+			if staff.lyrics_present?
+				ly sin + "Lyrics = {"
+				ly "\\new Lyrics \\lyricsto \"one\" "
+				ly staff.lyrics.to_ly
+				ly "} % " + sin + "Lyrics\n"
+			end
+
+			st = sin + " = " + brackets("{\n", "\n} % #{sin}\n") do |s|
+        s << staff.to_ly
+      end
+      ly st
+
+      if staff.chords_present?
+        ly sin + "Chords = {"
+        ly "\\chords "
+        ly staff.chords.to_ly
+        ly "} % " + sin + "Chords\n"
+      end
+
     end
 
     verbose("Translating SystemStaff to LilyPond.")
-    ly ""
     ly "global = {"
-    @system_staff.to_ly
+    global = @system_staff.to_ly
+    ly global
     ly "}"
     ly "\\new Score"
     ly "\\with"

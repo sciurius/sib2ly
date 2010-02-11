@@ -29,15 +29,7 @@ class SystemTextItem < Text
     t
   end
 
-  TEMPO_NOTE = {
-    "W" => "\breve",
-    "w" => "1",
-    "h" => "2",
-    "q" => "4",
-    "e" => "8",
-    "x" => "16",
-    "y" => "32"
-  }
+
 
   def tempo_note_to_dur(note, dots)
 #    x = TEMPO_NOTE[note]

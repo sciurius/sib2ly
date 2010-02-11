@@ -42,10 +42,14 @@ class BarRest < NoteRest
 
   def to_ly
     s = ""
+#        if @prev and (@prev.bar != @bar)
+#      s << " | % #{@bar.number}\n"
+#    end
+    
     s << voice_mode_to_ly
 
-    s << " " if !@texts.empty?
-    f = gcd(@duration, 1024);
+		#   s << " " if !@texts.empty? # What is the meaning of this?
+    f = @duration.gcd(1024);
     s << grace_to_ly
     if voice > 1 or @hidden
       s << "s1*"
@@ -54,6 +58,9 @@ class BarRest < NoteRest
     end
     s << (@duration/f).to_s + "/" + (1024/f).to_s;
     @texts.each{|text| s << text.to_ly}
-    return s
+#    if @ends_transposition
+#			s << "}} "
+#		end
+    s
   end
 end

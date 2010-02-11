@@ -19,6 +19,9 @@ class KeySignature < BarObject
 
   end
 
+  def priority
+    10
+  end
   def initialize_from_xml(xml)
     super(xml)
     @as_text = xml["AsText"].downcase;

@@ -20,29 +20,31 @@ require 'rubygems'
 require 'util'
 require 'version'
 require 'nokogiri'
-require 'translatable'
-require 'noterest'
-require 'spanners'
-require 'bar'
-require 'systemtextitem'
-require 'constants'
-require 'voice'
+#require 'translatable'
+#require 'noterest'
+#require 'spanners'
+#require 'bar'
+#require 'systemtextitem'
+#require 'constants'
 require 'benchmark'
-require 'instrument'
+#require 'instrument'
 require 'score'
-require 'staff'
-require 'note'
-require 'tuplet'
-require 'barrest'
-require 'timesignature'
-require 'keysignature'
-require 'clef'
-require 'tremolo'
-require 'specialbarline'
-require 'staffgroup'
+#require 'staff'
+#require 'note'
+#require 'tuplet'
+#require 'barrest'
+#require 'timesignature'
+#require 'keysignature'
+#require 'clef'
+#require 'tremolo'
+#require 'specialbarline'
+#require 'staffgroup'
 require 'optparse'
 require 'ostruct'
+require 'assert'
+
 include Benchmark
+
 #require "profile"
 exit if Object.const_defined?(:Ocra)
 
@@ -58,8 +60,8 @@ end
 
 $ly = nil
 
-def ly string
-  $ly << string
+def ly(string = nil)
+  $ly << string if string
   $ly << "\n"
 end
 
@@ -67,8 +69,11 @@ end
 
 $opt = OpenStruct.new
 $opt.filename = []
+$opt.out_file = ""
 $opt.verbose = false
+$opt.concise = false
 $opt.info = false
+$opt.list = false
 
 logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + "  Sibelius to LilPond translator    (c) 2010 Kirill Sidorov\n\n"
 
@@ -83,8 +88,20 @@ opts = OptionParser.new do |opts|
     $opt.info = i;
   end
 
+	opts.on("-l", "--list", "List staves only") do |l|
+    $opt.list = l;
+  end
+
+  opts.on("-o", "--output filename", "Output filename") do |o|
+    $opt.out_file = o
+  end
+
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     $opt.verbose = v
+  end
+
+  opts.on("-c", "--[no-]concise", "Try to produce more concise output") do |c|
+    $opt.concise = c
   end
   
   opts.separator ""
@@ -111,17 +128,26 @@ puts logo
 if !$opt.filename
   puts "ERROR: Invalid input file name."
 	Process.exit
-else
-  $opt.out_file = make_out_filename($opt.filename)
+end
+if $opt.out_file.empty?
+	$opt.out_file = make_out_filename($opt.filename)
 end
 
- puts "Reading the score..."
- fin = File.new($opt.filename, 'r')
- sib = Nokogiri.XML(fin)
- score = Score.new
- score.from_xml(sib.root);
- puts "Applying magic..."
- score.process
+puts Benchmark.measure{
+
+puts "Reading the score from #{$opt.filename}..."
+fin = File.new($opt.filename, 'r')
+sib = Nokogiri.XML(fin)
+score = Score.new
+score.from_xml(sib.root)
+
+if $opt.list
+	score.list_staves
+	Process.exit
+end
+
+puts "Applying magic..."
+score.process
 
 
 if $opt.info
@@ -131,7 +157,7 @@ else
   file = File.open($opt.out_file, 'w')
   $ly = LilypondFile.new(file)
   score.to_ly
-  puts "done."
+  puts "Done ;-P"
 end
 
 # fermata on barrest
@@ -166,3 +192,4 @@ end
 # tremolo как NoteRest
 # Sibelius versions
 # more than two voices
+}

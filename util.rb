@@ -13,12 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require 'roman'
 
-def safe_instrument_name(name)
-  s = name
-  DIGITS.each{|key,value| s = s.gsub(key, value)}
-  s = s.gsub(/[^A-Za-z.\-]/, '')
-  return s
+def unescape_xml(text)
+  text.gsub!('&quot;', "\"")
+  text.gsub!('&apos;', "'")
+  text.gsub!('&amp;', "&")
+  text.gsub!('&gt;', ">")
+  text.gsub!('&lt;', "<")
+  text
 end
 
 def ms2hms(ms)
@@ -33,67 +36,43 @@ def ms2hms(ms)
   ret = ret + seconds.to_s + "s " if seconds > 0
   return ret
 end
-  
+
+
 def written_name2ly(wn)
-  # TODO: quarter-tones
-  wn = wn.downcase
-  case wn.length
-  when 1
-    return wn;
-  when 2
-    if wn[1..1] == '#'
-      return wn[0..0] + 'is'
-    else
-      return wn[0..0] + 'es'
-    end
-  when 3
-    if wn[1..2] == '##'
-      return wn[0..0] + 'isis'
-    else
-      return wn[0..0] + 'eses'
-    end
-    return wn;
-  else
-    return "";
-  end
+  wn.downcase!
+  match = /^([a-g])(-|b|b-|bb|\+|#|#\+|x|)$/.match(wn)
+  match[1] + ACCIDENTALS[match[2]]
 end
 
-def gcd(a, b)
-  a.gcd(b)
+def pitch2diatonic(pitch, wn)
+  wn.downcase!
+  match = /^([a-g])(-|b|b-|bb|\+|#|#\+|x|)$/.match(wn)
+  note = match[1]
+  accidental = ACCIDENTALS_SEMITONES[match[2]]
+  (pitch - accidental).div(12) * 7 + DIATONIC[note]
 end
-
+  
 def get_octave (old, new)
   str = ''
-  if old == nil
-    return ""
-  end
+	return "" unless old
   pitch_margin = 3
   note = new
-  while (old - note > pitch_margin )
+  while (old - note > pitch_margin)
     str << ',';
     note += 7;
   end
-  if (str.length>0)
-    return str
-  end
-  while  (old - note < -pitch_margin )
+  return str if (str.length>0)
+  while  (old - note < -pitch_margin)
     str << '\'';
     note -= 7;
   end
-  return str
+  str
 end
 
-def clef2ly(clef)
-  if clef
-    ly_clef = CLEFS[clef]
-    if ly_clef
-      return "\\clef " + ly_clef
-    else
-      return ""
-    end
-  else return ""
-  end
-end
+#def get_octave(old_pitch, old_name, new_pitch, new_name)
+#
+#end
+
 
 def is_in?(nr, tuplet)
   if (nr.position < tuplet.position) or (nr.position >= tuplet.position + tuplet.played_duration)
@@ -104,30 +83,60 @@ end
 
 def get_tremolo_duration(d, trem)
   if d <= 128
-    return d/(2**trem)
+    return d / (2**trem)
   else
-    return 1024/(2**(trem+2))
+    return 1024 / (2**(trem + 2))
   end
 end
 
+# def fill(pos, duration, voice, noterest = nil)
+#  nrs = []
+#  # creates an array of NoteRests to fill a duration
+#  (0..10).each do |i|
+#    pow = 2**i
+#    if duration & pow != 0
+#      if not noterest
+#        nr = NoteRest.new
+#        nr.hidden = true
+#      else
+#        nr = NoteRest.copy(noterest)
+#      end
+#      nr.position = pos
+#      pos += pow
+#      nr.duration = pow
+#      nr.voice = voice
+#      nr.process
+#      nrs << nr
+#    end
+#  end
+#  nrs
+# end
+
+# Returns an array of NoteRests that are needed to fill a "duration" long
+# segment starting at "pos"
 def fill(pos, duration, voice, noterest = nil)
   nrs = []
-  # creates an array of NoteRests to fill a duration
-  (0..10).each do |i|
-    pow = 2**i
-    if duration & pow != 0
+  note = 1024
+  remaining = duration
+  while note > 1
+    if remaining >= note
+      # Insert a NoteRest of length "note"
       if not noterest
         nr = NoteRest.new
+        nr.hidden = true
       else
         nr = NoteRest.copy(noterest)
       end
       nr.position = pos
-      pos += pow
-      nr.duration = pow
-      nr.hidden = true
+      nr.duration = note
       nr.voice = voice
       nr.process
       nrs << nr
+
+      pos += note
+      remaining -= note
+    else
+      note /= 2
     end
   end
   nrs
@@ -149,7 +158,7 @@ def duration2ly(dur)
   end
   result = l.to_s;
   (dots).times {result << '.'}
-  return result
+  result
 end
 
 def make_out_filename(in_file)
@@ -159,3 +168,11 @@ end
 def escape_quotes(str)
   str.gsub('"', '\"')
 end
+
+
+  def brackets(open, close)
+    s = open
+    s = yield(s) if block_given?
+    s << close
+    s
+  end

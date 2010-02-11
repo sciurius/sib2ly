@@ -18,3 +18,7 @@ def verbose(text)
     puts text
   end
 end
+
+def warning(text)
+  puts "O_o WARNING: " + text
+end

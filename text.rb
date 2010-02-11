@@ -13,58 +13,57 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-class Text < BarObject
-  EXPRESSION = {
-    "f" => "\\f",
-    "ff" => "\\ff",
-    "fff" => "\\fff",
-    "ffff" => "\\ffff",
-    "p" => "\\p",
-    "pp" => "\\pp",
-    "ppp" => "\\ppp",
-    "pppp" => "\\ppp",
-    "mf" => "\\mf",
-    "mp" => "\\mp",
-    "sf" => "\\sf",
-    "fz" => "\\fz"
-  }
-  attr_accessor :text, :style_id
-  def initialize
+require 'constants'
 
+class Text < BarObject
+  attr_accessor :text, :style_id
+  def initialize(text = nil, style_id = nil)
+    super()
+    @text, @style_id = text, style_id
   end
 
   def initialize_from_xml(xml)
     super(xml)
-    @text = xml["Text"].split("~").first # get visible part of text
+
+    # Get the visible part of text only
+    @text = unescape_xml(xml["Text"]).split("~").first
+
+    # Make sure @text is not nil
     @text = "" unless @text
     @style_id = xml["StyleId"]
   end
 
   def Text.new_from_xml(xml)
     t = Text.new
-	t.initialize_from_xml(xml)
+    t.initialize_from_xml(xml)
     t
   end
 
   def to_ly
     s = ""
-    if !@text or @hidden or @text.empty?
-      return s
-    end
+    return "" if !@text or @hidden or @text.empty?
     case @style_id
     when "text.staff.expression"
       exp = EXPRESSION[@text.downcase]
-      s << exp if exp
-    when "text.staff.technique"
-      if dy < 0
-        s << "_"
-      else
-        s << "^"
+      if exp
+        s << (dy < 0 ? "" : "^")
+        s << exp
+			else
+				# warning "I do not know how to typeset the expression \"#{@text}\". Ignoring!"
+				      s << (dy < 0 ? "_" : "^")
+      # Typeset the text as a \markup
+      s << "\\markup \{\"" + @text + "\"\}"
       end
-      s << "\\markup \{\\italic \{" + @text + "\}\}"
+      #s << exp if exp
+    when "text.staff.technique"
+      # Try to guess if the text should be typeset above or below the staff
+      s << (dy < 0 ? "_" : "^")
+      # Typeset the text as a \markup
+      s << "\\markup \{\\italic \{\"" + @text + "\"\}\}"
     when "text.staff.space.chordsymbol"
+      # Chord symbols are now typeset correctly in \chordmode, see chord.rb
       #s << "^\\markup \{\"" + @text + "\"\}"
     end
-    return s
+		s
   end
 end

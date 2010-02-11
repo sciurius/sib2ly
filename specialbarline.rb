@@ -30,6 +30,13 @@ class SpecialBarline < BarObject
     sb
   end
 
+  def priority
+    if @barline_type == "StartRepeat"
+      return 20
+    end
+    super
+  end
+
   def to_ly
     s = "\\bar \""
     case @barline_type
@@ -37,6 +44,17 @@ class SpecialBarline < BarObject
       s << "|."
     when "Double"
       s << "||"
+    when "Dotted"
+      s << ":"
+    when "StartRepeat"
+      s << "|:"
+    when "EndRepeat"
+      s << ":|"
+    when "Invisible"
+      s << ""
+    else
+      warning "Unknown bar line type: " + @barline_type
+      s << "|"
     end
     s << "\" "
     return s

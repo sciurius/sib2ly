@@ -14,12 +14,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require 'barobject'
+require 'note'
 
 class NoteRest < BarObject
-  attr_accessor :duration, :real_duration, :notes, :articulations, :grace, :acciaccatura, :appogiatura, :tuplets, :ends_tuplet, :tied,
-    :ends_spanners, :begins_spanners, :texts, :texts_before, :one_voice, :prev, :grace_notes, :single_tremolos, :double_tremolos,
-    :starts_tremolo, :ends_tremolo,
-    :ottavation, :slurred
+  attr_reader :duration, :real_duration, :notes, :articulations, :grace,
+    :acciaccatura, :appogiatura, :tuplets, :tied,
+    :ends_spanners, :begins_spanners, :texts, :texts_before, :prev,
+    :single_tremolos, :double_tremolos,
+    :ottavation, :beam,
+		:ends_bar, :bar
+	attr_accessor :starts_tremolo,  :ends_tremolo, :begins_transposition, :ends_transposition, :one_voice, :grace_notes, :slurred,
+		:ends_tuplet
   def initialize
     @tied = false
     @slurred = 0
@@ -38,6 +43,18 @@ class NoteRest < BarObject
     @ottavation = 0
   end
 
+	def transposition
+		if is_rest?
+			if @prev
+        return prev.transposition
+			else
+				return 0
+			end
+		else
+			@notes.first.transposition
+		end
+	end
+
   def initialize_from_xml(xml)
     initialize
     super(xml)
@@ -48,6 +65,7 @@ class NoteRest < BarObject
     @grace = xml["GraceNote"].eql?("true")
     @acciaccatura = xml["IsAcciaccatura"].eql?("true")
     @appogiatura = xml["IsAppoggiatura"].eql?("true")
+    @beam = xml["Beam"].to_i;
     (xml/"Note").each {|note| notes << Note.new(note)}
   end
 
@@ -62,19 +80,50 @@ class NoteRest < BarObject
     nr
   end
 
+	def prev=(nr)
+		assert(((nil == nr) or nr.is_a?(NoteRest)), "Trying to set a non-NoteRest object as the previous NoteRest.")
+		@prev = nr
+	end
+
+	def tuplets=(tp)
+		assert(tp, "Trying to assign nil to tuplets.")
+		assert(tp.is_a?(Array), "Trying to assign a non-Array to tuplets.")
+		assert((tp.empty? or (tp.inject(true) {|all, obj| all = all and obj.is_a?(Tuplet)})), "Some of the objects in the array of tuplets are not of type Tuplet.")
+		@tuplets = tp
+	end
+
+	def duration=(d)
+		assert(d > 0, "NoteRests must have positive duration.")
+		assert(d.to_i == d, "The duration of a NoteRest must be an integer.")		
+		@duration = d.to_i
+	end
+
   def transpose_octave(ottavation)
-    @notes.each{|n| n.diatonic_pitch += 7 * ottavation}
+    @notes.each do |n|
+      n.diatonic_pitch += 7 * ottavation
+      n.written_diatonic_pitch += 7 * ottavation
+    end
     @grace_notes.each{|n| n.transpose_octave(ottavation)}
   end
 
   def notes_to_ly
     s = ""
-    need_duration = true #(!@prev or (@prev.duration != @duration))
+    # In concise mode, we need to output the duration after each NoteRest if
+    # it is the first NoteRest in the staff, or if its duration differs from
+    # that of the previous one, or if it has grace notes attached to it, or
+    # if it preceded by a rest.
+    need_duration = ((not $opt.concise) or
+        (not @grace_notes.empty?) or
+        (not @prev) or
+        (@prev.duration != @duration) or
+        (@prev.is_rest?))
+
+    # Depending on whether it is a rest, a single note, or a chord...
     case @notes.length
     when 0
       # rest
       if @hidden
-        f = gcd(@duration, 1024);
+        f = @duration.gcd(1024);
         s << "s1*"
         s << (@duration/f).to_s + "/" + (1024/f).to_s;
       else
@@ -84,7 +133,7 @@ class NoteRest < BarObject
     when 1
       # single note
       if @hidden
-        f = gcd(@duration, 1024);
+        f = @duration.gcd(1024);
         s << "s1*"
         s << (@duration/f).to_s + "/" + (1024/f).to_s;
       else
@@ -93,38 +142,26 @@ class NoteRest < BarObject
       end
     else
       # chord
-      s << "<"
-      @notes.each_with_index do |note, index|
-        s << note.to_ly
-        if index < @notes.length - 1
-          s << " "
-        end
-      end
-      s << ">" 
+      s << "<#{@notes * ' '}>"
       s << duration2ly(@duration) if need_duration
+			# TODO: Hidden chords?
     end
-
-#        if @one_voice
-#      s << "^\\markup {ov}"
-#    end
-
-    
-    return s
+    s
   end
-
+  
+	# Typeset grace notes, if any.
   def grace_to_ly
-    # grace notes, if any
-    s = ""
-    unless @grace_notes.empty?
-      # index of the first non-hidden grace note
-      first_non_hidden = @grace_notes.index(@grace_notes.find{|obj| !obj.hidden})
+		return "" if @grace_notes.empty?
+		s = ""
+		# index of the first non-hidden grace note
+		first_non_hidden = @grace_notes.index(@grace_notes.find{|obj| !obj.hidden})
 
-      if !first_non_hidden or @slurred > 0
-        s << '\grace '
-      elsif @grace_notes.first.acciaccatura
-        s << '\acciaccatura '
-      else
-        s << '\appoggiatura '
+		if !first_non_hidden or @slurred > 0
+			s << '\grace '
+		elsif @grace_notes.first.acciaccatura
+			s << '\acciaccatura '
+		else
+			s << '\appoggiatura '
       end
       if @grace_notes.length > 1
         s << "{"
@@ -139,9 +176,8 @@ class NoteRest < BarObject
         end
       end
       if @grace_notes.length > 1
-        s << "}"
+        s << "} "
       end
-    end
     s
   end
 
@@ -156,10 +192,7 @@ class NoteRest < BarObject
     s
   end
 
-  #  def to_s
-  #    return notes_to_ly
-  #  end
-
+	# Is this NoteRest the second in a a double-tremolo?
   def ends_tremolo
     @prev and @prev.starts_tremolo
   end
@@ -199,31 +232,47 @@ class NoteRest < BarObject
     return s
   end
 
+	def begins_bar
+		@prev and (@prev.bar != @bar)	
+	end
+
+	# Return the preceding NoteRest that is not a rest
+	def prev_non_rest
+		return nil unless @prev
+		if @prev.is_rest?
+			return @prev.prev_non_rest
+		else
+			return @prev
+		end
+	end
+
+	# Convert the NoteRest to LilyPond syntax
   def to_ly
     s = ""
+
+		# Is this NoteRest in polyphonic mode or single voice mode?
     s << voice_mode_to_ly
+
+		# Is this noterest the first of a series under an ottava line?
     s << begin_octavation_to_ly
     s << begin_tuplets_to_ly
     s << grace_to_ly
     s << texts_before_to_ly
     s << tremolos_to_ly
-    s << notes_to_ly
 
+		# Convert the actual notes
+    s << notes_to_ly
+		
     # add articulations
     unless is_rest?
       art = Hash[*ARTICULATION_BITS.select{|key, value| (0<(@articulations & (1 << value)))}.flatten]
       art.each{|key, value| s << ARTICULATION_TEXT[key]}
     end
 
-
-
     # add text
     @texts.each{|text| s << text.to_ly}
 
     @begins_spanners.each{|sp| s << sp.text_begin_before if !sp.is_a?(OctavaLine)}
-
-
-
 
     unless @begins_spanners.empty?
       @begins_spanners.each{|sp| s << sp.text_begin}
@@ -238,24 +287,32 @@ class NoteRest < BarObject
     # close the brace after the second NoteRest in a double tremolo if necessary
     s << '}' if ends_tremolo
 
-    # close the brace after the last NoteRest in a tuplet if necessary
+    # close the brace after the last NoteRest in a tuplet, if necessary.
     (@ends_tuplet).times { s << "}" }
+
     return s
   end
 
+	# Return the position in the Bar just after this NoteRest
+	def position_after
+		@position + real_duration
+	end
+
+  # Determine if only some of the notes are tied
+  # 1) If all notes are tied then the NoteRest is tied, but individual notes are not
+  # 2) If only some notes are tied, then the NoteRest is not tied
   def determine_ties
-    # Determine if only some of the notes are tied
-    # 1) If all notes are tied then the NoteRest is tied, but individual notes are not
-    # 2) If only some notes are tied, then the NoteRest is not tied
     all_notes_tied = @notes.inject(true){|sum, note| sum = sum and note.tied}
     if all_notes_tied and not is_rest?
+      # All notes are tied, therefore make the whole NoteRest tied
+      # but not the individual notes
       @tied = true
       @notes.each{|note| note.tied = false}
     end
   end
 
+	# Compute the sounding duration, taking into account all tumplets to which this NoteRest belongs
   def compute_real_duration
-    # Compute the sounding duration, taking into account all tumplets to which this NoteRest belongs
     @real_duration = @duration
     @tuplets.each do |tuplet|
       @real_duration *= tuplet.right
@@ -279,6 +336,7 @@ class NoteRest < BarObject
     return @notes.length > 1
   end
 
+	# Return the lowest note in the NoteRest, by absolute pitch.
   def lowest
     return @notes.sort{|a, b| a.pitch <=> b.pitch}.first;
   end
@@ -286,17 +344,18 @@ class NoteRest < BarObject
   # Determine if this NoteRest overlaps temporally with another.
   def overlaps?(other)
     not (other.position >= @position + @duration or
-    @position >= other.position + other.duration)
+        @position >= other.position + other.duration)
   end
 end
 
 class DoubleTremolo < BarObject
-  attr_accessor :first, :second, :duration
+  attr_reader :first, :second, :duration
   def initialize(first, second)
     @first = first
     @second = second
     @position = @first.position
     @duration = @first.duration + @second.duration
+		# TODO: Check what happens if a double tremolo is in a tuplet.
   end
 
   def to_ly
