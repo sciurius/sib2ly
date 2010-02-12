@@ -43,6 +43,10 @@ class NoteRest < BarObject
     @ottavation = 0
   end
 
+	# Number of semitones by which this NoteRest is transposed in the transposing
+  # score. If this is a rest then its transposition is equal to that of a pre-
+  # vious non-rest. If this is a rest and there are no previous non-rests, then
+  # its transposition is 0.
 	def transposition
 		if is_rest?
 			if @prev
@@ -106,6 +110,12 @@ class NoteRest < BarObject
     @grace_notes.each{|n| n.transpose_octave(ottavation)}
   end
 
+  # Returns the duration as a fraction of the whole, as string.
+  def duration_as_fraction(dur, whole = 1024)
+    f = dur.gcd(whole)
+    "#{(dur/f)}/#{(whole/f)}"
+  end
+
   def notes_to_ly
     s = ""
     # In concise mode, we need to output the duration after each NoteRest if
@@ -123,9 +133,8 @@ class NoteRest < BarObject
     when 0
       # rest
       if @hidden
-        f = @duration.gcd(1024);
         s << "s1*"
-        s << (@duration/f).to_s + "/" + (1024/f).to_s;
+        s << duration_as_fraction(duration)
       else
         s << "r"
         s << duration2ly(@duration) if need_duration
@@ -133,16 +142,15 @@ class NoteRest < BarObject
     when 1
       # single note
       if @hidden
-        f = @duration.gcd(1024);
         s << "s1*"
-        s << (@duration/f).to_s + "/" + (1024/f).to_s;
+        s << duration_as_fraction(duration)
       else
         s << @notes.first.to_ly
         s << duration2ly(@duration) if need_duration
       end
     else
       # chord
-      s << "<#{@notes * ' '}>"
+      s << "<#{@notes * ' '}>" # Join the anotes, separated by spaces.
       s << duration2ly(@duration) if need_duration
 			# TODO: Hidden chords?
     end
@@ -162,25 +170,27 @@ class NoteRest < BarObject
 			s << '\acciaccatura '
 		else
 			s << '\appoggiatura '
+    end
+    if @grace_notes.length > 1
+      s << "{"
+    end
+    @grace_notes.each_with_index do |gn, index|
+      s << gn.notes_to_ly + " "
+      if (@grace_notes.length > 1) and (first_non_hidden == index) and (first_non_hidden != @grace_notes.length-1)
+        s << '['
       end
-      if @grace_notes.length > 1
-        s << "{"
+      if (@grace_notes.length > 1) and (@grace_notes.length-1 == index) and (first_non_hidden) and (first_non_hidden != @grace_notes.length-1)
+        s << ']'
       end
-      @grace_notes.each_with_index do |gn, index|
-        s << gn.notes_to_ly + " "
-        if (@grace_notes.length > 1) and (first_non_hidden == index) and (first_non_hidden != @grace_notes.length-1)
-          s << '['
-        end
-        if (@grace_notes.length > 1) and (@grace_notes.length-1 == index) and (first_non_hidden) and (first_non_hidden != @grace_notes.length-1)
-          s << ']'
-        end
-      end
-      if @grace_notes.length > 1
-        s << "} "
-      end
+    end
+    if @grace_notes.length > 1
+      s << "} "
+    end
     s
   end
 
+	# Output either \oneVoice or one of the \voiceXXX commands, depending
+	# on whether this NoteRest is used in a polyphonic circumstances or not.
   def voice_mode_to_ly
     s = ""
     # select voice mode
@@ -236,7 +246,8 @@ class NoteRest < BarObject
 		@prev and (@prev.bar != @bar)	
 	end
 
-	# Return the preceding NoteRest that is not a rest
+	# Return the preceding NoteRest that is not a rest, or nil if this is
+	# the first NoteRest.
 	def prev_non_rest
 		return nil unless @prev
 		if @prev.is_rest?
@@ -293,7 +304,7 @@ class NoteRest < BarObject
     return s
   end
 
-	# Return the position in the Bar just after this NoteRest
+	# Return the position in the Bar just after this NoteRest.
 	def position_after
 		@position + real_duration
 	end

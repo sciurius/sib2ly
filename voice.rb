@@ -101,17 +101,17 @@ class Voice
 					prev.bar.add(rb)
 					nr.bar.add(re)
 
-#					prev.ends_transposition = true
-#					nr.begins_transposition = true
+          #					prev.ends_transposition = true
+          #					nr.begins_transposition = true
 				else
-#					prev.ends_transposition = false
-#					nr.begins_transposition = false
+          #					prev.ends_transposition = false
+          #					nr.begins_transposition = false
 				end
 			else
 				# This is the first non-rest. It does not end a transposition.
 				# It or the first NoteRest begins a transposition.
 				# nr.begins_transposition = true
-#				noterests.first.begins_transposition = true
+        #				noterests.first.begins_transposition = true
 				fn = noterests.first
 				tb = TranspositionBegin.new(nonrests.first.transposition)
 				tb.position = fn.position
@@ -119,10 +119,10 @@ class Voice
 				rb.position = fn.position
 				fn.bar.add(tb)
 				fn.bar.add(rb)
-#				nr.ends_transposition = false
+        #				nr.ends_transposition = false
 			end
 		end
-#		noterests.last.ends_transposition = true
+    #		noterests.last.ends_transposition = true
 		ln = noterests.last
 		te = TranspositionEnd.new
 		te.position = ln.position_after
@@ -345,7 +345,7 @@ class Voice
 
     v = brackets("{\n", "}") do |s|
       @bars.each do |bar|
-        s << bar.to_ly;
+        s << bar.to_ly
       end
       s
     end

@@ -18,9 +18,9 @@
 CLEFS = {
 	'clef.treble' 				=> 'treble',
 	'clef.bass' 					=> 'bass',
-	'clef.treble.down.8'	=>'"treble_8"',
-	'clef.treble.up.8'		=>'"treble^8"',
-	'clef.treble.up.15'		=>'"treble^15"',
+	'clef.treble.down.8'	=> '"treble_8"',
+	'clef.treble.up.8'		=> '"treble^8"',
+	'clef.treble.up.15'		=> '"treble^15"',
 	'clef.soprano' 				=> 'soprano',
 	'clef.soprano.mezzo'	=> 'mezzosoprano',
 	'clef.tab' 						=> 'tab',
@@ -32,7 +32,7 @@ CLEFS = {
 	'clef.alto' 					=> 'alto',
 	'clef.tenor' 					=> 'tenor',
 	'clef.percussion' 		=> 'percussion',
-	'clef.null'					=> ''
+	'clef.null'						=> ''
 }
 
 class Clef < BarObject

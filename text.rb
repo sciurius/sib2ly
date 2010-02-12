@@ -16,54 +16,54 @@
 require 'constants'
 
 class Text < BarObject
-  attr_accessor :text, :style_id
-  def initialize(text = nil, style_id = nil)
-    super()
-    @text, @style_id = text, style_id
-  end
+	attr_accessor :text, :style_id
+	def initialize(text = nil, style_id = nil)
+		super()
+		@text, @style_id = text, style_id
+	end
 
-  def initialize_from_xml(xml)
-    super(xml)
+	def initialize_from_xml(xml)
+		super(xml)
 
-    # Get the visible part of text only
-    @text = unescape_xml(xml["Text"]).split("~").first
+		# Get the visible part of text only
+		@text = unescape_xml(xml["Text"]).split("~").first
 
-    # Make sure @text is not nil
-    @text = "" unless @text
-    @style_id = xml["StyleId"]
-  end
+		# Make sure @text is not nil
+		@text = "" unless @text
+		@style_id = xml["StyleId"]
+	end
 
-  def Text.new_from_xml(xml)
-    t = Text.new
-    t.initialize_from_xml(xml)
-    t
-  end
+	def Text.new_from_xml(xml)
+		t = Text.new
+		t.initialize_from_xml(xml)
+		t
+	end
 
-  def to_ly
-    s = ""
-    return "" if !@text or @hidden or @text.empty?
-    case @style_id
-    when "text.staff.expression"
-      exp = EXPRESSION[@text.downcase]
-      if exp
-        s << (dy < 0 ? "" : "^")
-        s << exp
+	def to_ly
+		s = ""
+		return "" if !@text or @hidden or @text.empty?
+		case @style_id
+		when "text.staff.expression"
+			exp = EXPRESSION[@text.downcase]
+			if exp
+				s << (dy < 0 ? "" : "^")
+				s << exp
 			else
 				# warning "I do not know how to typeset the expression \"#{@text}\". Ignoring!"
-				      s << (dy < 0 ? "_" : "^")
-      # Typeset the text as a \markup
-      s << "\\markup \{\"" + @text + "\"\}"
-      end
-      #s << exp if exp
-    when "text.staff.technique"
-      # Try to guess if the text should be typeset above or below the staff
-      s << (dy < 0 ? "_" : "^")
-      # Typeset the text as a \markup
-      s << "\\markup \{\\italic \{\"" + @text + "\"\}\}"
-    when "text.staff.space.chordsymbol"
-      # Chord symbols are now typeset correctly in \chordmode, see chord.rb
-      #s << "^\\markup \{\"" + @text + "\"\}"
-    end
+				s << (dy < 0 ? "_" : "^")
+				# Typeset the text as a \markup
+				s << "\\markup \{\"" + @text + "\"\}"
+			end
+			#s << exp if exp
+		when "text.staff.technique"
+			# Try to guess if the text should be typeset above or below the staff
+			s << (dy < 0 ? "_" : "^")
+			# Typeset the text as a \markup
+			s << "\\markup \{\\italic \{\"" + @text + "\"\}\}"
+		when "text.staff.space.chordsymbol"
+			# Chord symbols are now typeset correctly in \chordmode, see chord.rb
+			#s << "^\\markup \{\"" + @text + "\"\}"
+		end
 		s
-  end
+	end
 end

@@ -171,8 +171,9 @@ end
 
 
   def brackets(open, close)
-    s = open
-    s = yield(s) if block_given?
+    s = []
+    s << open
+    s << yield([]) if block_given?
     s << close
-    s
+    s.join
   end

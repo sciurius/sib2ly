@@ -13,14 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-require 'lyricitem'
-require 'barend'
-require 'barobject'
-require 'noterest'
-require 'barrest'
-require 'keysignature'
-require 'tuplet'
-
+#require 'lyricitem'
+#require 'barend'
+#require 'barobject'
+#require 'noterest'
+#require 'barrest'
+#require 'keysignature'
+#require 'tuplet'
+%w{lyricitem barobject noterest barrest keysignature tuplet}.each {|obj| require obj}
 class Bar
   attr_accessor :length, :number, :system_staff, :time_signature,
     :nr_count, :bar_voice

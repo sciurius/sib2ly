@@ -20,25 +20,8 @@ require 'rubygems'
 require 'util'
 require 'version'
 require 'nokogiri'
-#require 'translatable'
-#require 'noterest'
-#require 'spanners'
-#require 'bar'
-#require 'systemtextitem'
-#require 'constants'
 require 'benchmark'
-#require 'instrument'
 require 'score'
-#require 'staff'
-#require 'note'
-#require 'tuplet'
-#require 'barrest'
-#require 'timesignature'
-#require 'keysignature'
-#require 'clef'
-#require 'tremolo'
-#require 'specialbarline'
-#require 'staffgroup'
 require 'optparse'
 require 'ostruct'
 require 'assert'
@@ -133,63 +116,31 @@ if $opt.out_file.empty?
 	$opt.out_file = make_out_filename($opt.filename)
 end
 
-puts Benchmark.measure{
+#puts Benchmark.measure{
 
-puts "Reading the score from #{$opt.filename}..."
-fin = File.new($opt.filename, 'r')
-sib = Nokogiri.XML(fin)
-score = Score.new
-score.from_xml(sib.root)
+  puts "Reading the score from #{$opt.filename}..."
+  fin = File.new($opt.filename, 'r')
+  sib = Nokogiri.XML(fin)
+  score = Score.new
+  score.from_xml(sib.root)
 
-if $opt.list
-	score.list_staves
-	Process.exit
-end
+  if $opt.list
+    score.list_staves
+    Process.exit
+  end
 
-puts "Applying magic..."
-score.process
+  puts "Applying magic..."
+  score.process
 
 
-if $opt.info
-  # display score information
-  puts score.info
-else
-  file = File.open($opt.out_file, 'w')
-  $ly = LilypondFile.new(file)
-  score.to_ly
-  puts "Done ;-P"
-end
+  if $opt.info
+    # display score information
+    puts score.info
+  else
+    file = File.open($opt.out_file, 'w')
+    $ly = LilypondFile.new(file)
+    score.to_ly
+    puts "Done ;-P"
+  end
 
-# fermata on barrest
-# slur direction
-# stems
-# sometimes keysignature in the previous bar
-# stem groupings
-# small notes
-# slurs with grace notes
-# rehearsal letters
-# octavation in transposing score
-# multiple spanners on one note
-## tremolos
-# text formatting
-## staff types
-## grace notes
-## tempi
-# barlines
-# shape notes
-# lines
-# repeats
-# piano centered dynamics
-## arpeggio
-# parts
-# auto key signatures
-## fix sync grace notes
-# simplify output
-# tests
-## text below and above staff
-# combine scores
-# time stamp and score duration
-# tremolo как NoteRest
-# Sibelius versions
-# more than two voices
-}
+#}
