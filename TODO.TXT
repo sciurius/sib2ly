@@ -1,0 +1,34 @@
+
+# fermata on barrest
+# slur direction
+# stems
+# sometimes keysignature in the previous bar
+# stem groupings
+# small notes
+# slurs with grace notes
+# rehearsal letters
+# octavation in transposing score
+# multiple spanners on one note
+## tremolos
+# text formatting
+## staff types
+## grace notes
+## tempi
+# barlines
+# shape notes
+# lines
+# repeats
+# piano centered dynamics
+## arpeggio
+# parts
+# auto key signatures
+## fix sync grace notes
+# simplify output
+# tests
+## text below and above staff
+# combine scores
+# time stamp and score duration
+# tremolo как NoteRest
+# Sibelius versions
+# more than two voices
+
