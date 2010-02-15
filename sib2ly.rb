@@ -20,14 +20,14 @@ require 'rubygems'
 require 'util'
 require 'version'
 require 'nokogiri'
+require 'translatable'
+require 'constants'
 require 'benchmark'
 require 'score'
-require 'optparse'
-require 'ostruct'
 require 'assert'
+require 'trollop'
 
 include Benchmark
-
 #require "profile"
 exit if Object.const_defined?(:Ocra)
 
@@ -49,98 +49,53 @@ def ly(string = nil)
 end
 
 
-
-$opt = OpenStruct.new
-$opt.filename = []
-$opt.out_file = ""
-$opt.verbose = false
-$opt.concise = false
-$opt.info = false
-$opt.list = false
-
-logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + "  Sibelius to LilPond translator    (c) 2010 Kirill Sidorov\n\n"
-
-opts = OptionParser.new do |opts|
-  script_name = File.basename($0)
-
-  opts.banner = logo + "Usage: #{script_name} [options] filename\n\n"
-
-  opts.separator ""
-  opts.separator "Specific options:"
-  opts.on("-i", "--info", "Display score information only") do |i|
-    $opt.info = i;
-  end
-
-	opts.on("-l", "--list", "List staves only") do |l|
-    $opt.list = l;
-  end
-
-  opts.on("-o", "--output filename", "Output filename") do |o|
-    $opt.out_file = o
-  end
-
-  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    $opt.verbose = v
-  end
-
-  opts.on("-c", "--[no-]concise", "Try to produce more concise output") do |c|
-    $opt.concise = c
-  end
-  
-  opts.separator ""
-  opts.separator "Common options:"
-
-  # No argument, shows at tail.  This will print an options summary.
-  opts.on_tail("-h", "--help", "Show this message") do
-    puts opts
-    exit
-  end
-
-  # Switch to print the version.
-  opts.on_tail("--version", "Show version") do
-    puts logo
-    exit
-  end
+logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + \
+  "  Sibelius to LilPond translator    (c) 2010 Kirill Sidorov\n\n"
+$opts = Trollop::options do
+	version logo
+	banner logo + "Usage: ruby #{File.basename($0)} [options] filename\n\n"
+	opt :output,	"Output file name", :type => String
+#  opt :concise, "Produce more concise output"
+	opt :list, 		"List staves only and exit"
+	opt :staff,		"Process the specified staff only", :type => :int
+	opt :info, 		"Display score information"
+	opt :verbose, "Display verbose mesages"
 end
 
-opts.parse!(ARGV)
-$opt.filename = ARGV.pop
+$opts[:input] = ARGV.pop
 
 puts logo
 
-if !$opt.filename
-  puts "ERROR: Invalid input file name."
+if !$opts[:input]
+  error "Invalid input file name."
 	Process.exit
 end
-if $opt.out_file.empty?
-	$opt.out_file = make_out_filename($opt.filename)
+if !$opts[:output]
+	$opts[:output] = make_out_filename($opts[:input])
 end
 
-#puts Benchmark.measure{
+puts "Reading the score from #{$opts[:input]}..."
+fin = File.new($opts[:input], 'r')
+sib = Nokogiri.XML(fin)
+score = Score.new
+score.from_xml(sib.root)
 
-  puts "Reading the score from #{$opt.filename}..."
-  fin = File.new($opt.filename, 'r')
-  sib = Nokogiri.XML(fin)
-  score = Score.new
-  score.from_xml(sib.root)
+if $opts[:list]
+	score.list_staves
+	Process.exit
+end
 
-  if $opt.list
-    score.list_staves
-    Process.exit
-  end
-
-  puts "Applying magic..."
-  score.process
+puts "Applying magic..."
+score.process
 
 
-  if $opt.info
-    # display score information
-    puts score.info
-  else
-    file = File.open($opt.out_file, 'w')
-    $ly = LilypondFile.new(file)
-    score.to_ly
-    puts "Done ;-P"
-  end
+if $opts[:info] 
+  # Display score information
+  puts score.info
+else
+  file = File.open($opts[:output], 'w')
+  $ly = LilypondFile.new(file)
+  score.to_ly
+  puts "Done ;-P"
+end
 
-#}

@@ -38,57 +38,35 @@ class SystemTextItem < Text
 
   def to_ly
     s = ""
-    case @style_id
-    when "text.system.tempo", "text.system.metronome"
-      ts = @text.strip
-      #match = /^((|(\S*\s*)*\S))\s*\(([Wwhqexy])(\.*)\s*=\s*(\d+)\)$/.match(@text.strip)
-      match = /^(.*?)\(?\s*([Wwhqexy])(\.*)\s*=([^\d])*(\d+)\s*\)?$/.match(ts)
-      if match
-        tempo_text = match[1] ? match[1].strip : ""
-        note =  match[2] ? match[2].strip : ""
-        dots =  match[3] ? match[3].strip : ""
-        qualifier =  match[4] ? match[4].strip : "" # as in: circa 120
-        number =  match[5] ? match[5].strip : ""
-        unless tempo_text.empty?
-          s << "\\tempo \"" << tempo_text << "\" " << tempo_note_to_dur(note, dots) << " = " << number << " "
-        else
-          s << "\\tempo " << tempo_note_to_dur(note, dots) << " = " << number << " "
-        end
-      else
-        match = /^([Wwhqexy])(\.*)\s*=\s*(\d+)$/.match(ts)
+    ts = @text.strip
+    unless ts.empty?
+      case @style_id
+      when "text.system.tempo", "text.system.metronome"
+        #match = /^((|(\S*\s*)*\S))\s*\(([Wwhqexy])(\.*)\s*=\s*(\d+)\)$/.match(@text.strip)
+        match = /^(.*?)\(?\s*([Wwhqexy])(\.*)\s*=([^\d])*(\d+)\s*\)?$/.match(ts)
         if match
-          note = match[1]
-          dots = match[2]
-          number = match[3]
-          s << "\\tempo " << tempo_note_to_dur(note, dots) << " = " << number << " "
+          tempo_text = match[1] ? match[1].strip : ""
+          note =  match[2] ? match[2].strip : ""
+          dots =  match[3] ? match[3].strip : ""
+          qualifier =  match[4] ? match[4].strip : "" # as in: circa 120
+          number =  match[5] ? match[5].strip : ""
+          unless tempo_text.empty?
+            s << "\\tempo \"" << tempo_text << "\" " << tempo_note_to_dur(note, dots) << " = " << number << " "
+          else
+            s << "\\tempo " << tempo_note_to_dur(note, dots) << " = " << number << " "
+          end
         else
-          s << "\\tempo \"" << ts << "\" "
+          match = /^([Wwhqexy])(\.*)\s*=\s*(\d+)$/.match(ts)
+          if match
+            note = match[1]
+            dots = match[2]
+            number = match[3]
+            s << "\\tempo " << tempo_note_to_dur(note, dots) << " = " << number << " "
+          else
+            s << "\\tempo \"" << ts << "\" "
+          end
         end
       end
-
-
-
-      #        case @text
-      #        when /\s*((|(\S*\s*)*\S))\s*\(([Wwhqexy])(\.*)\s*=\s*(\d+)\)\s*/
-      #          tempo_text = $1
-      #          note = $4
-      #          dots = $5
-      #          number = $6
-      #          s << "\\tempo \"" << tempo_text << "\" " << tempo_note_to_dur(note, dots) << " = " << number << " "
-      #        when /\s*((\S*\s*)*\S)\s*([Wwhqexy])(\.*)\s*=\s*(\d+)\s*/
-      #          tempo_text = $1
-      #          note = $3
-      #          dots = $4
-      #          number = $5
-      #          s << "\\tempo \"" << tempo_text << "\" " << tempo_note_to_dur(note, dots) << " = " << number << " "
-      #        when /\s*([Wwhqexy])(\.*)\s*=\s*(\d+)/
-      #          note = $1
-      #          dots = $2
-      #          number = $3
-      #          s << "\\tempo " << tempo_note_to_dur(note, dots) << " = " << number << " "
-      #        else
-      #          s << "\\tempo \"" << @text << "\" "
-      #        end
     end
     return s
   end

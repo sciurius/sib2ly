@@ -14,11 +14,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 def verbose(text)
-  if $opt.verbose
+  if $opts[:verbose]
     puts text
   end
 end
 
 def warning(text)
-  puts "O_o WARNING: " + text
+  puts "WARNING: " + text
+end
+
+def error(text)
+	puts "ERROR: " + text
 end

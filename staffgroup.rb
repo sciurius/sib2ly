@@ -24,11 +24,13 @@ class StaffGroup
     @instruments += instrument
   end
 
+  def empty?
+    @instruments.empty?
+  end
+
   def to_ly
     s = ""
-    if @instruments.empty?
-      return s
-    end
+    return s if empty?
     if @bracket
       s << "  \\new StaffGroup\n"
       s << "  {\n"
@@ -38,7 +40,7 @@ class StaffGroup
       s << instrument.to_ly
     end
     if @bracket
-      s << "\n    >>\n  } % StaffGroup\n"
+      s << "\n    >>\n  } % StaffGroup"
     end
     return s
   end

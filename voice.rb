@@ -39,7 +39,13 @@ class Voice
   end
 
   def nr_count
-    @bars.inject(0){|sum, bar| sum+=bar.nr_count}
+    @bars.inject(0){|sum, bar| sum += bar.nr_count}
+  end
+
+  def contains_music?
+    return bars.find do |bar|
+      bar.contains_music?
+    end ? true : false
   end
 
   def first_note
@@ -292,6 +298,7 @@ class Voice
   end
 
   def process
+    @bars.each{|bar| bar.delete_empty_texts}
     @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
     link_notes
@@ -323,26 +330,6 @@ class Voice
 
 
   def to_ly
-    #    s = ""
-    #    if fn
-    #      #diatonic = pitch2diatonic(fn.written_pitch, fn.written_name)
-    #      #rel = "\\relative c" + get_octave(35-7, fn.diatonic_pitch - (7 * ((fn.pitch - fn.written_pitch)/12)));
-    #      rel = "\\relative c" + get_octave(35-7, fn.written_diatonic_pitch);
-    #    else
-    #      rel = ""
-    #    end
-    #    if rel.empty?
-    #      s << "{\n"
-    #    else
-    #      s << rel + " {\n"
-    #    end
-    #    @bars.each do |bar|
-    #      s << bar.to_ly;
-    #    end
-    #    s << "}"
-    #    s << " % " + rel if !rel.empty?
-    #    return s
-
     v = brackets("{\n", "}") do |s|
       @bars.each do |bar|
         s << bar.to_ly

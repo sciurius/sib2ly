@@ -38,7 +38,10 @@ class Bar
     sel = other.objects.select do |obj|
       fun.call(obj)
     end
-    bar.add(sel)
+    sel.each do |obj|
+      # TODO: Replace this with a proper copying mechanism.
+      bar.add(Marshal.load( Marshal.dump(obj) ))
+    end
     bar
   end
 
@@ -57,8 +60,14 @@ class Bar
   end
 
   # If the bar is musically empty (e.g. bar rest)
-  def is_musically_empty?
+  def musically_empty?
     @objects.length == 1 and @objects.first.is_a?(BarRest)
+  end
+
+  def contains_music?
+    return objects.find do |obj|
+      (obj.is_a?(NoteRest) and !obj.is_a?(BarRest) and !obj.hidden)
+    end ? true : false
   end
 
   # Remove the specified objects from the bar.
@@ -70,19 +79,19 @@ class Bar
   def add(objs)
     [*objs].each do |obj|
       obj.bar = self
-			@objects << obj
+      @objects << obj
     end
-		sort_objects
+    sort_objects
   end
 
-#  def insert(idx, objs)
-#    objs = [*objs]
-#    objs.each do |obj|
-#      obj.bar = self
-#      @objects.insert(idx, obj)
-#      idx += 1
-#    end
-#  end
+  #  def insert(idx, objs)
+  #    objs = [*objs]
+  #    objs.each do |obj|
+  #      obj.bar = self
+  #      @objects.insert(idx, obj)
+  #      idx += 1
+  #    end
+  #  end
 
   def clear
     @objects = []
@@ -148,8 +157,8 @@ class Bar
     items = objects.select{|obj| obj.is_a?(SystemTextItem)}
     if !items or items.empty?
       br = BarRest.new
-      br.duration = @length
-      br.real_duration = @length
+      br.duration = Duration.new(@length)
+      br.real_duration = Duration.new(@length)
       br.voice = voice# @bar_voice
       br.hidden = true
       add(br)
@@ -184,10 +193,10 @@ class Bar
     return if nr.empty?
     last = nil
     nr.each do |n|
-      if last and last.position + last.real_duration > n.position + 1
-        ratio = last.duration / last.real_duration
+      if last and last.position + last.real_duration.duration > n.position + 1
+        ratio = last.duration.duration.to_f / last.real_duration.duration.to_f
         last.real_duration = n.position - last.position
-        last.duration = last.real_duration * ratio
+        last.duration = (last.real_duration.duration * ratio).to_i
         puts "WARNING: Overfull bar \#" + @number.to_s
       end
       last = n
@@ -208,12 +217,24 @@ class Bar
     end
   end
 
+  def assign_lyrics
+    lyrics = objects.select{|obj| obj.is_a?(LyricItem)}
+    lyrics.each do |ly|
+      unless ly.text.empty?
+        #texts.each do |text|
+        owner = get_noterest_at(ly.position)
+        owner.lyrics = ly if owner
+      end
+    end
+    remove(lyrics)
+  end
+
   def <<(obj)
     assert(obj.is_a?(BarObject))
     add(obj)
   end
 
-	def fix_multiple_barrests
+  def fix_multiple_barrests
     # Very rarely there would be more than one BarRest in the same voice per bar
     br = objects.select{|obj| obj.is_a?(BarRest)}
     if br.length > 1
@@ -223,10 +244,16 @@ class Bar
         @objects.delete(br[i])
       end
     end
-	end
+  end
+
+  def delete_empty_texts
+    et = (objects.select {|obj| obj.is_a?(Text) and obj.empty?})
+    remove(et)
+  end
 
   def process
-		fix_multiple_barrests
+    #puts "Bar.process called for Bar #{number} in voice #{bar_voice}"
+    fix_multiple_barrests
 
     # remove KeySigature from global except in the first bar
     if @system_staff and @number != 1
@@ -243,6 +270,7 @@ class Bar
 
     tuplets = @objects.select{|objt| objt.is_a?(Tuplet)}
     nr = @objects.select{|obj| obj.is_a?(NoteRest) and !obj.grace}
+
     @nr_count = nr.select{|obj| !obj.hidden and !obj.is_a?(BarRest)}.length
     nr.each { |obj| obj.tuplets += tuplets.select { |objt| is_in?(obj, objt) } }
     nr.each { |obj| obj.tuplets.each { |objt| objt.notes << obj } }
@@ -253,6 +281,7 @@ class Bar
     assign_grace_notes
     fix_missing_nr
     assign_texts     # assign text to NoteRests
+    assign_lyrics
     compute_double_tremolo_starts_ends
     sort_objects
     # determine_voice_mode
@@ -325,26 +354,22 @@ class Bar
     
     # Add tremolos to the bar instead
     add(tremolos)
-
-
   end
 
-  #  # Insert a BarObject obj at the given position
-  #  def insert(obj, position)
-  #    add(obj)
-  #    sort_objects
-  #  end
-
+  # Returns the first NoteRest to which point +pos+ belongs or nil if no
+  # such NoteRest is found.
   def get_noterest_at(pos)
     noterests = @objects.select{|obj| (obj.is_a?(NoteRest) and (not obj.grace))}
-		result = noterests.find do |nr|
-			(nr.position == pos) or (nr.position < pos and nr.position + nr.real_duration > pos)
-		end
-		result
+    result = noterests.find do |nr|
+      (nr.position == pos) or \
+        (nr.position < pos and nr.position + nr.real_duration > pos)
+    end
+    result
   end
 
   def get_nearest_noterest(pos, ignore_rests = false)
-    noterests = @objects.select{|obj| obj.is_a?(NoteRest) and (not obj.grace) and (!ignore_rests or !obj.is_rest?)}
+    noterests = @objects.select{|obj| obj.is_a?(NoteRest) and (not obj.grace) \
+        and (!ignore_rests or !obj.is_rest?)}
     min = 1e99
     argmin = nil
     for nr in noterests
@@ -355,5 +380,9 @@ class Bar
       end
     end
     return argmin, min
+  end
+
+  def to_s
+    "Bar #{@number}"
   end
 end

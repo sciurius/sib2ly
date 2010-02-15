@@ -19,6 +19,10 @@ class TimeSignature < BarObject
 
   end
 
+  def priority
+    12
+  end
+
   def initialize_from_xml(xml)
     super(xml)
     @numerator = xml["Numerator"].to_i;

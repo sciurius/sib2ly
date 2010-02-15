@@ -19,6 +19,7 @@ require 'staff'
 require 'systemtextitem'
 require 'instrument'
 require 'staffgroup'
+require 'constants'
 
 class Score < Translatable
   attr_accessor :staves, :system_staff, :instruments, :staff_groups, :spectra,
@@ -233,16 +234,20 @@ class Score < Translatable
       #puts staff.full_instrument_name
       sin = staff.safe_instrument_name
 
-#      ly sin + " = {"
-#      staff.to_ly
-#      ly "} % " + sin + "\n"
+      #      ly sin + " = {"
+      #      staff.to_ly
+      #      ly "} % " + sin + "\n"
 
-			if staff.lyrics_present?
-				ly sin + "Lyrics = {"
-				ly "\\new Lyrics \\lyricsto \"one\" "
-				ly staff.lyrics.to_ly
-				ly "} % " + sin + "Lyrics\n"
-			end
+      #	if staff.lyrics_present?
+      staff.lyrics.each_with_index do |l, index|
+        if l.contains_music?
+          ly sin + VOICE_NAMES[index + 1] + "Lyrics = {"
+          ly "\\new Lyrics \\lyricmode "
+          ly l.to_ly(sin + VOICE_NAMES[index + 1])
+          ly "} % " + sin + "Lyrics\n"
+        end
+      end
+      #	end
 
 			st = sin + " = " + brackets("{\n", "\n} % #{sin}\n") do |s|
         s << staff.to_ly
@@ -270,9 +275,9 @@ class Score < Translatable
     ly "}"
 
     verbose("Writing groups of staves.")
-    ly "{  <<"
+    ly "{\n<<"
     @staff_groups.each do |group|
-      ly group.to_ly
+      ly group.to_ly unless group.empty?
     end
     ly ">>"
     ly "} % Score"

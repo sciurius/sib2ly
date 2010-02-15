@@ -15,9 +15,11 @@
 
 require 'constants'
 require 'barobject'
+require 'duration'
 
 class LyricItem < BarObject
-	attr_accessor :text, :style_id, :syllable_type, :num_notes
+	attr_accessor :text, :style_id,
+  :duration, :num_notes, :syllable_type
 	def initialize
 
 	end
@@ -33,6 +35,7 @@ class LyricItem < BarObject
 		@style_id = xml["StyleId"]
 		@syllable_type = xml["SyllableType"].to_i
 		@num_notes = xml["NumNotes"].to_i
+    @duration = Duration.new(xml["Duration"].to_i)
 	end
 
 	def LyricItem.new_from_xml(xml)
@@ -41,21 +44,50 @@ class LyricItem < BarObject
 		li
 	end
 
-	def to_ly
-		s = ""
-		return "" if (!@text or @hidden or @text.empty?)
-		case @syllable_type
-		when 0 # Middle of word
-			s << @text.gsub(' ', '_')
-			s << "- "
-			(@num_notes - 1).times {s << " __ "}
-		when 1 # End of word
-			s << @text.gsub(' ', '_')
-			s << " "
-			(@num_notes - 1).times {s << " __ "}
-		else
-			warning "Unknown syllable type."
-		end
-		s
-	end
+  #	def to_ly
+  #		s = ""
+  #		return "" if (!@text or @hidden or @text.empty?)
+  #		case @syllable_type
+  #		when 0 # Middle of word
+  #			s << @text.gsub(' ', '_')
+  #			s << " -- "
+  #			(@num_notes - 1).times {s << " __ "}
+  #		when 1 # End of word
+  #			s << @text.gsub(' ', '_')
+  #			s << " "
+  #			(@num_notes - 1).times {s << " __ "}
+  #		else
+  #			warning "Unknown syllable type."
+  #		end
+  #		s
+  #	end
+
+  def to_ly
+    s = ""
+    if @hidden
+      s << "\\skip "
+      s << @duration.to_ly << " "
+    else
+      s << @text.gsub(' ', '_')
+      s << @duration.to_ly << " "
+    end
+    
+    unless @hidden
+      case @syllable_type
+      when 0 # Middle of word
+        s << " -- "
+        #(@num_notes - 1).times {s << " _ "}
+      when 1 # End of word
+        if @num_notes == 1
+          s << " "
+        else
+          s << " __ "
+        end
+        #(@num_notes - 1).times {s << " __ "}
+      else
+        warning "Unknown syllable type."
+      end
+    end
+    s
+  end
 end

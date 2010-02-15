@@ -31,4 +31,6 @@
 # tremolo как NoteRest
 # Sibelius versions
 # more than two voices
-
+# trill spanner too long
+# force dynamics to notes
+# slurred grace notes

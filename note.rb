@@ -14,10 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class Note
-  attr_reader :pitch, :diatonic_pitch, :written_pitch, :name, :written_name,
+  attr_reader :pitch,  :written_pitch, :name, :written_name,
     :previous_note, :ottavation, :bracketed, :accidental,
-    :written_accidental, :written_diatonic_pitch
-	attr_accessor :tied
+    :written_accidental
+	attr_accessor :diatonic_pitch, :written_diatonic_pitch, :tied
   def initialize(xml)
     @pitch = xml["Pitch"].to_i;
     @accidental = xml["Accidental"].to_i;

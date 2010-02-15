@@ -32,6 +32,7 @@ class Staff < Translatable
     @voices = []
     @bars = []
     @chords = []
+    @lyrics = []
     @is_system_staff = xml["IsSystemStaff"].eql?("true")
     @full_instrument_name = xml["FullInstrumentName"]
     @instrument_name = xml["InstrumentName"]
@@ -42,7 +43,7 @@ class Staff < Translatable
     @family = @initial_style_id.split(".")[1] if @initial_style_id
     @initial_clef = xml["InitialClefStyleId"];
 
-		return if $opt.list # Do not proceed to read bars
+		return if $opts[:list] # Do not proceed to read bars
     
 		puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
     (xml/"Bar").each do |bar|
@@ -67,12 +68,10 @@ class Staff < Translatable
 
   def split_into_voices
     verbose("Splitting staves into voices.")
-		# Create a new voice for lyrics and populate it with LyricItems
-    @lyrics = VoiceLyrics.filter_copy(1, @bars) {|obj| obj.is_a?(LyricItem)}
-		@bars.each do |bar|
-			li = bar.objects.select {|obj| obj.is_a?(LyricItem)}
-			bar.remove(li)
-		end
+    unless @is_system_staff
+      @lyrics << VoiceLyrics.filter_copy(1, @bars) {|obj| obj.voice == 1}
+      @lyrics << VoiceLyrics.filter_copy(2, @bars) {|obj| obj.voice == 2}
+    end
 
     @voices << Voice.filter_copy(1, @bars) {|obj| obj.voice == 1 or obj.voice == 0 or obj.is_a?(OctavaLine)}
     unless @is_system_staff
@@ -105,22 +104,24 @@ class Staff < Translatable
       for i in 0...@bars.length
         objects = []
         voices.each do |voice|
-          # Select non-hidden, non-grace NotRests and DoubleTremolos from i-th Bar in this voice
+          # Select non-hidden, non-grace NotRests and DoubleTremolos
+          # from i-th Bar in this voice
           objects += voice.bars[i].objects.select do |obj|
-            obj.is_a?(DoubleTremolo) or (obj.is_a?(NoteRest) and
-                (not obj.grace) and (not obj.hidden))
+            (obj.is_a?(DoubleTremolo) or (obj.is_a?(NoteRest) and \
+                  (not obj.grace) and (not obj.hidden)))
           end
         end
 
         voices.each do |voice|
           voice.bars[i].objects.each do |this|
-            if this.is_a?(NoteRest) and not this.grace and not this.hidden
-              this.one_voice = !objects.find do |other|
-                other.voice != this.voice and not
-                (other.position >= this.position + this.duration or
-                    this.position >= other.position + other.duration) and
-                  !other.hidden
+            if this.is_a?(NoteRest) and !this.grace and !this.hidden
+
+              overlapping = objects.find do |other|
+                ((other.voice != this.voice) and (!other.hidden) and \
+                  this.overlaps?(other))
               end
+              this.one_voice = overlapping ? false : true
+
             end
           end
         end
@@ -129,13 +130,11 @@ class Staff < Translatable
   end
 
   def process
-        
     split_into_voices
-    
     verbose("Processing individual voices.")
     voices.each{|voice| voice.process}
     chords.process
-    lyrics.process
+    lyrics.each{|ly| ly.process}
     determine_voice_mode
   end
 
@@ -143,9 +142,9 @@ class Staff < Translatable
     @voices.inject(0){|sum, v| sum += v.nr_count}
   end
 
-  def polyphonic
+  def polyphonic?
     for i in 1..@voices.length
-      if @voices[i] and @voices[i].nr_count > 0
+      if @voices[i] and @voices[i].contains_music?
         return true
       end
     end
@@ -160,29 +159,32 @@ class Staff < Translatable
     false
   end
 
-	# Is there something to typeset in lyrics mode?
-	def lyrics_present?
-		return (@lyrics and (@lyrics.lyrics_count > 0))
-	end
-
-	VOICE_NAMES = {
-		1 => 'one',
-		2 => 'two',
-		3 => 'three',
-		4 => 'four'
-	}
+  # Is there something to typeset in lyrics mode?
+  def lyrics_present?
+    return false unless (@lyrics and !@lyrics.empty?)
+    return @lyrics.find do |ly|
+      ly.contains_music?
+    end ? true : false
+  end
+  
   def to_ly
     # s = clef2ly(@initial_clef)
+
 		s = ""	
-    if polyphonic or lyrics_present?
-      v = brackets(" <<", "\n>>") do |ss|
+    if !@is_system_staff and (polyphonic? or lyrics_present?)
+      sin = safe_instrument_name
+      v = brackets("<<", "\n>>") do |ss|
         voices.each_with_index do |voice, index|
-          ss << brackets("\n\\new Voice = \"#{VOICE_NAMES[index + 1]}\" {", "}") do |sss|
+          ss << brackets("\n\\new Voice = \"#{sin + VOICE_NAMES[index + 1]}\" {", "}") do |sss|
             sss << VOICE[index+1] if index > 0
             sss << voice.to_ly
           end
         end
-				ss << "\n\\" + safe_instrument_name + "Lyrics" if lyrics_present?
+        unless @is_system_staff
+          lyrics.each_with_index do |ly, index|
+            ss << "\n\\" + sin + VOICE_NAMES[index + 1] + "Lyrics" if lyrics_present?
+          end
+        end
         ss
       end
       s << v

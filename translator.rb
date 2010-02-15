@@ -1,6 +1,11 @@
-
 class Translator
-  def initialize
+  def initialize(filename)
     
   end
+  
+  def to_ly
+    
+  end
+
+
 end

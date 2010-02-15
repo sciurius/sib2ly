@@ -15,6 +15,8 @@
 
 require 'roman'
 
+
+
 def unescape_xml(text)
   text.gsub!('&quot;', "\"")
   text.gsub!('&apos;', "'")
@@ -54,7 +56,7 @@ end
   
 def get_octave (old, new)
   str = ''
-	return "" unless old
+  return "" unless old
   pitch_margin = 3
   note = new
   while (old - note > pitch_margin)
@@ -82,6 +84,8 @@ def is_in?(nr, tuplet)
 end
 
 def get_tremolo_duration(d, trem)
+  trem = trem.to_i
+  d = d.to_i
   if d <= 128
     return d / (2**trem)
   else
@@ -142,24 +146,7 @@ def fill(pos, duration, voice, noterest = nil)
   nrs
 end
 
-def duration2ly(dur)
-  return '0' if 0 == dur
-  l = 1;
-  while dur * l < 1024
-    l *= 2;
-  end
-  remains = dur - (1024 / l);
-  dots = 0
-  dotd = 512 / l;
-  while (remains > 0 and dotd > 0)
-    remains -= dotd
-    dotd /= 2
-    dots += 1
-  end
-  result = l.to_s;
-  (dots).times {result << '.'}
-  result
-end
+
 
 def make_out_filename(in_file)
   in_file.chomp(File.extname(in_file)) + ".ly"
@@ -170,10 +157,10 @@ def escape_quotes(str)
 end
 
 
-  def brackets(open, close)
-    s = []
-    s << open
-    s << yield([]) if block_given?
-    s << close
-    s.join
-  end
+def brackets(open, close)
+  s = []
+  s << open
+  s << yield([]) if block_given?
+  s << close
+  s.join
+end

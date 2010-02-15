@@ -40,6 +40,14 @@ class Text < BarObject
 		t
 	end
 
+  def empty?
+    to_ly.empty?
+  end
+
+  def dynamic?
+    style_id == "text.staff.expression"
+  end
+
 	def to_ly
 		s = ""
 		return "" if !@text or @hidden or @text.empty?

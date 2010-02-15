@@ -25,7 +25,7 @@ class BarRest < NoteRest
   def initialize_from_xml(xml)
     super(xml)
     parent_bar = xml.parent
-    @duration = parent_bar["Length"].to_i
+    @duration = Duration.new(parent_bar["Length"].to_i)
     @position = 0
     @real_duration = @duration
   end
@@ -43,14 +43,9 @@ class BarRest < NoteRest
   def to_ly
     s = ""
     s << voice_mode_to_ly
-    f = @duration.gcd(1024);
-    s << grace_to_ly
-    if voice > 1 or @hidden
-      s << "s1*"
-    else
-      s << "R1*"
-    end
-    s << (@duration/f).to_s + "/" + (1024/f).to_s;
+    s << grace_to_ly # This is to synchronise grace notes between staves.
+    s << ((voice > 1 or @hidden) ? "s" : "R")
+    s << @duration.to_ly
     @texts.each{|text| s << text.to_ly}
     s
   end

@@ -15,6 +15,7 @@
 
 require 'barobject'
 require 'note'
+require 'duration'
 
 class NoteRest < BarObject
   attr_reader :duration, :real_duration, :notes, :articulations, :grace,
@@ -24,7 +25,7 @@ class NoteRest < BarObject
     :ottavation, :beam,
 		:ends_bar, :bar
 	attr_accessor :starts_tremolo,  :ends_tremolo, :begins_transposition, :ends_transposition, :one_voice, :grace_notes, :slurred,
-		:ends_tuplet
+		:ends_tuplet, :lyrics
   def initialize
     @tied = false
     @slurred = 0
@@ -37,6 +38,7 @@ class NoteRest < BarObject
     @duration = 0
     @ends_tuplet = 0
     @grace_notes = []
+    @lyrics = nil
     @single_tremolos = 0
     @double_tremolos = 0
     @starts_tremolo = false
@@ -62,14 +64,14 @@ class NoteRest < BarObject
   def initialize_from_xml(xml)
     initialize
     super(xml)
-    @duration = xml["Duration"].to_i;
+    @duration = Duration.new(xml["Duration"].to_i)
     @single_tremolos = xml["SingleTremolos"].to_i
     @double_tremolos = xml["DoubleTremolos"].to_i
     @articulations = xml["Articulations"].to_i
     @grace = xml["GraceNote"].eql?("true")
     @acciaccatura = xml["IsAcciaccatura"].eql?("true")
     @appogiatura = xml["IsAppoggiatura"].eql?("true")
-    @beam = xml["Beam"].to_i;
+    @beam = xml["Beam"].to_i
     (xml/"Note").each {|note| notes << Note.new(note)}
   end
 
@@ -79,27 +81,38 @@ class NoteRest < BarObject
     nr
   end
 
-  def NoteRest.copy(other)
-    nr = other.clone
-    nr
-  end
-
 	def prev=(nr)
-		assert(((nil == nr) or nr.is_a?(NoteRest)), "Trying to set a non-NoteRest object as the previous NoteRest.")
+		assert(((nil == nr) or nr.is_a?(NoteRest)), \
+        "Trying to set a non-NoteRest object as the previous NoteRest.")
 		@prev = nr
 	end
 
 	def tuplets=(tp)
 		assert(tp, "Trying to assign nil to tuplets.")
 		assert(tp.is_a?(Array), "Trying to assign a non-Array to tuplets.")
-		assert((tp.empty? or (tp.inject(true) {|all, obj| all = all and obj.is_a?(Tuplet)})), "Some of the objects in the array of tuplets are not of type Tuplet.")
+		assert((tp.empty? or (tp.inject(true) {|all, obj| all = all and obj.is_a?(Tuplet)})), \
+        "Some of the objects in the array of tuplets are not of type Tuplet.")
 		@tuplets = tp
 	end
 
 	def duration=(d)
-		assert(d > 0, "NoteRests must have positive duration.")
-		assert(d.to_i == d, "The duration of a NoteRest must be an integer.")		
-		@duration = d.to_i
+    if d.is_a?(Duration)
+      @duration = d.clone
+    else
+      assert(d > 0, "NoteRests must have positive duration.")
+      assert(d.to_i == d, "The duration of a NoteRest must be an integer.")
+      @duration = Duration.new(d.to_i)
+    end
+	end
+
+  def real_duration=(d)
+    if d.is_a?(Duration)
+      @real_duration = d.clone
+    else
+      assert(d > 0, "NoteRests must have positive duration.")
+      assert(d.to_i == d, "The duration of a NoteRest must be an integer.")
+      @real_duration = Duration.new(d.to_i)
+    end
 	end
 
   def transpose_octave(ottavation)
@@ -110,11 +123,7 @@ class NoteRest < BarObject
     @grace_notes.each{|n| n.transpose_octave(ottavation)}
   end
 
-  # Returns the duration as a fraction of the whole, as string.
-  def duration_as_fraction(dur, whole = 1024)
-    f = dur.gcd(whole)
-    "#{(dur/f)}/#{(whole/f)}"
-  end
+
 
   def notes_to_ly
     s = ""
@@ -122,7 +131,7 @@ class NoteRest < BarObject
     # it is the first NoteRest in the staff, or if its duration differs from
     # that of the previous one, or if it has grace notes attached to it, or
     # if it preceded by a rest.
-    need_duration = ((not $opt.concise) or
+    need_duration = ((not $opts[:concise]) or
         (not @grace_notes.empty?) or
         (not @prev) or
         (@prev.duration != @duration) or
@@ -133,25 +142,25 @@ class NoteRest < BarObject
     when 0
       # rest
       if @hidden
-        s << "s1*"
-        s << duration_as_fraction(duration)
+        s << "s"
+        s << duration.to_ly
       else
         s << "r"
-        s << duration2ly(@duration) if need_duration
+        s << duration.to_ly if need_duration
       end
     when 1
       # single note
       if @hidden
-        s << "s1*"
-        s << duration_as_fraction(duration)
+        s << "s"
+        s << duration.to_ly
       else
         s << @notes.first.to_ly
-        s << duration2ly(@duration) if need_duration
+        s << duration.to_ly if need_duration
       end
     else
       # chord
       s << "<#{@notes * ' '}>" # Join the anotes, separated by spaces.
-      s << duration2ly(@duration) if need_duration
+      s << @duration.to_ly if need_duration
 			# TODO: Hidden chords?
     end
     s
@@ -176,10 +185,12 @@ class NoteRest < BarObject
     end
     @grace_notes.each_with_index do |gn, index|
       s << gn.notes_to_ly + " "
-      if (@grace_notes.length > 1) and (first_non_hidden == index) and (first_non_hidden != @grace_notes.length-1)
+      if (@grace_notes.length > 1) and (first_non_hidden == index) and \
+					(first_non_hidden != @grace_notes.length-1)
         s << '['
       end
-      if (@grace_notes.length > 1) and (@grace_notes.length-1 == index) and (first_non_hidden) and (first_non_hidden != @grace_notes.length-1)
+      if (@grace_notes.length > 1) and (@grace_notes.length-1 == index) and \
+					(first_non_hidden) and (first_non_hidden != @grace_notes.length-1)
         s << ']'
       end
     end
@@ -228,17 +239,17 @@ class NoteRest < BarObject
   def tremolos_to_ly
     # NOTE: Has side effect, affects duration of the NoteRest
     s = ""
-    td = @duration
+    td = duration.to_i
     if @single_tremolos > 0 and !is_rest?
-      td = get_tremolo_duration(@duration, @single_tremolos)
-      s << '\repeat tremolo ' << (@duration / td).to_s << ' '
+      td = get_tremolo_duration(duration.to_i, @single_tremolos)
+      s << '\repeat tremolo ' << (duration.to_i / td).to_i.to_s << ' '
     elsif @starts_tremolo
-      td = get_tremolo_duration(@duration * 2, @double_tremolos)
-      s << '\repeat tremolo ' << (@duration / td).to_s << ' {'
+      td = get_tremolo_duration(duration.to_i * 2, @double_tremolos)
+      s << '\repeat tremolo ' << (duration.to_i / td).to_i.to_s << ' {'
     elsif ends_tremolo # second NoteRest in a double tremolo
-      td = get_tremolo_duration(@duration * 2, @prev.double_tremolos)
+      td = get_tremolo_duration(duration.to_i * 2, @prev.double_tremolos)
     end
-    @duration = td
+    self.duration = td
     return s
   end
 
@@ -276,12 +287,14 @@ class NoteRest < BarObject
 		
     # add articulations
     unless is_rest?
-      art = Hash[*ARTICULATION_BITS.select{|key, value| (0<(@articulations & (1 << value)))}.flatten]
+      art = Hash[*ARTICULATION_BITS.select{|key, value| \
+            (0<(@articulations & (1 << value)))}.flatten]
       art.each{|key, value| s << ARTICULATION_TEXT[key]}
     end
 
     # add text
     @texts.each{|text| s << text.to_ly}
+#    s << "^\\markup{I}" if one_voice
 
     @begins_spanners.each{|sp| s << sp.text_begin_before if !sp.is_a?(OctavaLine)}
 
@@ -306,7 +319,7 @@ class NoteRest < BarObject
 
 	# Return the position in the Bar just after this NoteRest.
 	def position_after
-		@position + real_duration
+		@position + real_duration.duration
 	end
 
   # Determine if only some of the notes are tied
@@ -322,16 +335,18 @@ class NoteRest < BarObject
     end
   end
 
-	# Compute the sounding duration, taking into account all tumplets to which this NoteRest belongs
+	# Compute the sounding duration, taking into account all tuplets
+  # to which this NoteRest belongs
   def compute_real_duration
-    @real_duration = @duration
+    @real_duration = @duration.clone
     @tuplets.each do |tuplet|
       @real_duration *= tuplet.right
     end
     @tuplets.each do |tuplet|
-      @real_duration = @real_duration.to_f/tuplet.left.to_f
+      @real_duration = Duration.new((@real_duration.duration.to_f/tuplet.left.to_f).round.to_i)
     end
-    @real_duration = @real_duration.round.to_i
+    #@real_duration.duration = @real_duration.duration.round.to_i
+    assert(@real_duration.is_a?(Duration))
   end
 
   def process
@@ -354,8 +369,12 @@ class NoteRest < BarObject
 
   # Determine if this NoteRest overlaps temporally with another.
   def overlaps?(other)
-    not (other.position >= @position + @duration or
-        @position >= other.position + other.duration)
+    not (other.position >= position + duration.to_i or
+        position >= other.position + other.duration.to_i)
+  end
+
+  def to_s
+    notes_to_ly
   end
 end
 
@@ -366,6 +385,7 @@ class DoubleTremolo < BarObject
     @second = second
     @position = @first.position
     @duration = @first.duration + @second.duration
+    assert(@duration.is_a?(Duration))
 		# TODO: Check what happens if a double tremolo is in a tuplet.
   end
 

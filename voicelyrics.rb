@@ -17,37 +17,53 @@ require 'voice'
 
 class VoiceLyrics < Voice
   def process
+    @bars.each{|bar| bar.assign_lyrics}
+    @bars.each{|bar| bar.process}
     @bars.each do |bar|
-      #create_grid(bar)
-    end
+      bar.fix_empty_bar(@voice)
+      # Remove everything that is not a NoteRest
+      objects = bar.objects.select do |obj|
+        (obj.is_a?(NoteRest))
+      end
+      bar.clear
+      bar.add(objects)
+
+      # Replace every NoteRest with a corresponding LyrcItem
+      lyric_items = bar.objects.map do |obj|
+        li = LyricItem.new
+        li.position = obj.position
+        li.duration = obj.duration
+        li.num_notes = obj.lyrics ? obj.lyrics.num_notes : nil
+        li.text = obj.lyrics ? obj.lyrics.text : nil
+        li.syllable_type = obj.lyrics ? obj.lyrics.syllable_type : nil
+        if obj.is_rest? or !obj.lyrics
+          li.hidden = true
+        end
+        li
+      end
+      bar.clear
+      bar.add(lyric_items) if lyric_items
+    end    
   end
 
 	def lyrics_count
-	@bars.inject(0) do |sum, bar|
-      sum += bar.objects.select{|obj| obj.is_a?(LyricItem)}.length
-    end	
+    @bars.inject(0) do |sum, bar|
+      sum += bar.objects.select{|obj| (obj.is_a?(NoteRest) or obj.is_a?(LyricItem))}.length
+    end
 	end
 
-  def create_grid(bar)
-    processed = []
-#    return if bar.objects.empty?
-    if bar.objects.empty?
-      processed << LyricItem.new("s", "", 0, bar.length)
-    else
-      if bar.objects.first.position > 0
-        processed += fill(0, bar.objects.first.position, nil)
+
+  def to_ly(voice)
+    s = []
+    v = brackets("{\n", "}") do |ss|
+      ss << "\\set associatedVoice = #\"#{voice}\"\n"
+      @bars.each do |bar|
+        ss << bar.to_ly
       end
-      bar.objects.each_with_index do |obj, i|
-        if i == bar.objects.length - 1
-          # This is the last object in the bar
-          len = bar.length - obj.position
-        else
-          len = bar.objects[i + 1].position - obj.position
-        end
-        prefix, postfix = translate_chord_to_ly(obj.text)
-        processed << LyricItem.new(prefix, postfix, obj.position, len)
-      end
+      ss
     end
-    bar.objects = processed
+    s << v
+    s
   end
+
 end
