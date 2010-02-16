@@ -22,13 +22,13 @@ require 'version'
 require 'nokogiri'
 require 'translatable'
 require 'constants'
-require 'benchmark'
+#require 'benchmark'
 require 'score'
 require 'assert'
 require 'trollop'
 
-include Benchmark
-#require "profile"
+#include Benchmark
+#require 'profile'
 exit if Object.const_defined?(:Ocra)
 
 class LilypondFile

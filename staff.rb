@@ -47,7 +47,7 @@ class Staff < Translatable
     
 		puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
     (xml/"Bar").each do |bar|
-      @bars << Bar.new_from_xml(bar)
+      @bars << Bar.new_from_xml(bar, self)
     end
   end
 

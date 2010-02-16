@@ -29,7 +29,7 @@ class Voice
     v = self.new(voice)
     v.voice = voice
     bars.each do |bar|
-      v.bars << Bar.copy(bar, fun)
+      v.bars << Bar.copy(bar, fun, v)
     end
     v 
   end
@@ -302,32 +302,24 @@ class Voice
     @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
     link_notes
-    link_noterests
+#    link_noterests
     @fn = first_note
     @bars.each{|bar| bar.process}
-    link_noterests
+ #   link_noterests
     #count_nr
 
     assign_spanners
     assign_time_signatures
-    handle_start_repeat_barlines
+#    handle_start_repeat_barlines
 		detect_transpositions
     #puts @nr_count
   end
 
-  # Sibelius reports the "start repeat" barline at the end of the bar from which
-  # the repeat begins. We need to move such barlines to the preceding bars.
-  def handle_start_repeat_barlines
-    #    @bars.each_with_index do |bar, idx|
-    #      blsr = bar.objects.select {|obj| (obj.is_a?(SpecialBarline) and obj.barline_type == "StartRepeat")}
-    #      if !blsr.empty?
-    #        blsr.each do |bl|
-    #
-    #        end
-    #      end
-    #    end
+  def prev_bar(bar)
+    idx = bars.index(bar)
+    return nil if idx.zero?
+    return bars[idx - 1]
   end
-
 
   def to_ly
     v = brackets("{\n", "}") do |s|

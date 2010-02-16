@@ -17,7 +17,7 @@ require 'voice'
 
 class VoiceLyrics < Voice
   def process
-    @bars.each{|bar| bar.assign_lyrics}
+#    @bars.each{|bar| bar.assign_lyrics}
     @bars.each{|bar| bar.process}
     @bars.each do |bar|
       bar.fix_empty_bar(@voice)

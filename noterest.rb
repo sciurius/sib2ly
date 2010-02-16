@@ -20,7 +20,7 @@ require 'duration'
 class NoteRest < BarObject
   attr_reader :duration, :real_duration, :notes, :articulations, :grace,
     :acciaccatura, :appogiatura, :tuplets, :tied,
-    :ends_spanners, :begins_spanners, :texts, :texts_before, :prev,
+    :ends_spanners, :begins_spanners, :texts, :texts_before,
     :single_tremolos, :double_tremolos,
     :ottavation, :beam,
 		:ends_bar, :bar
@@ -45,13 +45,19 @@ class NoteRest < BarObject
     @ottavation = 0
   end
 
+  def initialize_copy(source)
+    super
+    @duration = @duration.dup
+    @real_duration = @real_duration.dup if @real_duration
+  end
+
 	# Number of semitones by which this NoteRest is transposed in the transposing
   # score. If this is a rest then its transposition is equal to that of a pre-
   # vious non-rest. If this is a rest and there are no previous non-rests, then
   # its transposition is 0.
 	def transposition
 		if is_rest?
-			if @prev
+			if prev
         return prev.transposition
 			else
 				return 0
@@ -81,11 +87,16 @@ class NoteRest < BarObject
     nr
   end
 
-	def prev=(nr)
-		assert(((nil == nr) or nr.is_a?(NoteRest)), \
-        "Trying to set a non-NoteRest object as the previous NoteRest.")
-		@prev = nr
-	end
+  #	def prev=(nr)
+  #		assert(((nil == nr) or nr.is_a?(NoteRest)), \
+  #        "Trying to set a non-NoteRest object as the previous NoteRest.")
+  #		@prev = nr
+  #	end
+
+  # Returns the preceding NoteRest
+  def prev
+    bar.prev_noterest(self)
+  end
 
 	def tuplets=(tp)
 		assert(tp, "Trying to assign nil to tuplets.")
@@ -133,9 +144,9 @@ class NoteRest < BarObject
     # if it preceded by a rest.
     need_duration = ((not $opts[:concise]) or
         (not @grace_notes.empty?) or
-        (not @prev) or
-        (@prev.duration != @duration) or
-        (@prev.is_rest?))
+        (not prev) or
+        (prev.duration != duration) or
+        (prev.is_rest?))
 
     # Depending on whether it is a rest, a single note, or a chord...
     case @notes.length
@@ -203,20 +214,21 @@ class NoteRest < BarObject
 	# Output either \oneVoice or one of the \voiceXXX commands, depending
 	# on whether this NoteRest is used in a polyphonic circumstances or not.
   def voice_mode_to_ly
+    return "" if starts_tremolo or ends_tremolo
     s = ""
     # select voice mode
-    if (not @prev and @one_voice) or (@prev and !@prev.one_voice and @one_voice)
+    if (not prev and @one_voice) or (prev and !prev.one_voice and @one_voice)
       s << "\\oneVoice "
-    elsif (not @prev and not @one_voice) or (@prev and @prev.one_voice and !@one_voice)
+    elsif (not prev and not @one_voice) or (prev and prev.one_voice and !@one_voice)
       s << VOICE[@voice] << " " if @voice
     end
     s
   end
 
 	# Is this NoteRest the second in a a double-tremolo?
-  def ends_tremolo
-    @prev and @prev.starts_tremolo
-  end
+  #  def ends_tremolo
+  #    prev and prev.starts_tremolo
+  #  end
 
   def begin_octavation_to_ly
     return '' if @begins_spanners.empty?
@@ -236,35 +248,30 @@ class NoteRest < BarObject
     @texts_before.inject(''){|s, text| s << text.to_ly}
   end
 
-  def tremolos_to_ly
+  def single_tremolos_to_ly
     # NOTE: Has side effect, affects duration of the NoteRest
     s = ""
     td = duration.to_i
     if @single_tremolos > 0 and !is_rest?
       td = get_tremolo_duration(duration.to_i, @single_tremolos)
       s << '\repeat tremolo ' << (duration.to_i / td).to_i.to_s << ' '
-    elsif @starts_tremolo
-      td = get_tremolo_duration(duration.to_i * 2, @double_tremolos)
-      s << '\repeat tremolo ' << (duration.to_i / td).to_i.to_s << ' {'
-    elsif ends_tremolo # second NoteRest in a double tremolo
-      td = get_tremolo_duration(duration.to_i * 2, @prev.double_tremolos)
     end
     self.duration = td
     return s
   end
 
 	def begins_bar
-		@prev and (@prev.bar != @bar)	
+		prev and (prev.bar != bar)	
 	end
 
 	# Return the preceding NoteRest that is not a rest, or nil if this is
 	# the first NoteRest.
 	def prev_non_rest
-		return nil unless @prev
-		if @prev.is_rest?
-			return @prev.prev_non_rest
+		return nil unless prev
+		if prev.is_rest?
+			return prev.prev_non_rest
 		else
-			return @prev
+			return prev
 		end
 	end
 
@@ -280,7 +287,7 @@ class NoteRest < BarObject
     s << begin_tuplets_to_ly
     s << grace_to_ly
     s << texts_before_to_ly
-    s << tremolos_to_ly
+    s << single_tremolos_to_ly
 
 		# Convert the actual notes
     s << notes_to_ly
@@ -294,7 +301,7 @@ class NoteRest < BarObject
 
     # add text
     @texts.each{|text| s << text.to_ly}
-#    s << "^\\markup{I}" if one_voice
+    #    s << "^\\markup{I}" if one_voice
 
     @begins_spanners.each{|sp| s << sp.text_begin_before if !sp.is_a?(OctavaLine)}
 
@@ -309,7 +316,7 @@ class NoteRest < BarObject
     s << "~" if @tied
     s << " "
     # close the brace after the second NoteRest in a double tremolo if necessary
-    s << '}' if ends_tremolo
+    #    s << '}' if ends_tremolo
 
     # close the brace after the last NoteRest in a tuplet, if necessary.
     (@ends_tuplet).times { s << "}" }
@@ -378,20 +385,46 @@ class NoteRest < BarObject
   end
 end
 
-class DoubleTremolo < BarObject
-  attr_reader :first, :second, :duration
+class DoubleTremolo < NoteRest
+  attr_reader :first, :second, :duration, :real_duration
   def initialize(first, second)
     @first = first
     @second = second
     @position = @first.position
-    @duration = @first.duration + @second.duration
+    @duration = Duration.new(@first.duration.to_i + @second.duration.to_i)
+    @real_duration = Duration.new(@duration.to_i)
     assert(@duration.is_a?(Duration))
 		# TODO: Check what happens if a double tremolo is in a tuplet.
   end
 
+  def is_rest?
+    false
+  end
+
+  def grace_notes
+    first.grace_notes
+  end
+
+  def transposition
+    first.transposition
+  end
+
+  def lowest
+    first.lowest
+  end
+
   def to_ly
-    s = first.to_ly
+    s = ""
+    s << voice_mode_to_ly
+    td = get_tremolo_duration(first.duration.to_i * 2, first.double_tremolos)
+    s << '\repeat tremolo ' << (first.duration.to_i / td).to_i.to_s << ' {'
+    first.duration = td
+    second.duration = td
+    #    elsif ends_tremolo # second NoteRest in a double tremolo
+    #      td = get_tremolo_duration(duration.to_i * 2, prev.double_tremolos)
+    s << first.to_ly
     s << second.to_ly
+    s << "} "
     s
   end
 

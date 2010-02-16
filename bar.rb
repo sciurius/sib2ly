@@ -23,33 +23,36 @@
 %w{lyricitem barobject noterest barrest keysignature tuplet}.each {|obj| require obj}
 class Bar
   attr_accessor :length, :number, :system_staff, :time_signature,
-    :nr_count, :bar_voice
+    :nr_count, :bar_voice, :parent
   attr_reader :objects
-  def initialize(length, bar_voice, number, system_staff)
+  def initialize(length, bar_voice, number, system_staff, parent)
     @bar_voice = 1
-    @length, @bar_voice, @number, @system_staff = length, bar_voice, number, system_staff
+    @length, @bar_voice, @number, @system_staff, @parent = \
+      length, bar_voice, number, system_staff, parent
     @objects = [] #[BarEnd.new(self)]
   end
 
   # Create a bar populated with objects taken from another bar
 	# subject to a filter.
-  def Bar.copy(other, fun)
-    bar = Bar.new(other.length, nil, other.number, other.system_staff)
+  def Bar.copy(other, fun, parent)
+    bar = Bar.new(other.length, nil, other.number, other.system_staff, parent)
     sel = other.objects.select do |obj|
       fun.call(obj)
     end
     sel.each do |obj|
       # TODO: Replace this with a proper copying mechanism.
-      bar.add(Marshal.load( Marshal.dump(obj) ))
+      bar.add(obj.clone)
+      #bar.add(Marshal.load( Marshal.dump(obj) ))
     end
     bar
   end
 
-  def Bar.new_from_xml(xml)
+  def Bar.new_from_xml(xml, parent)
     bar = Bar.new(xml["Length"].to_i,
       1,
       xml["BarNumber"].to_i,
-      xml.parent.name.eql?("SystemStaff"))
+      xml.parent.name.eql?("SystemStaff"),
+      parent)
     xml.children.each do |object|
       if eval("defined? " + object.name) && Class === eval(object.name)
         bar.objects << Object::const_get(object.name).new_from_xml(object)
@@ -136,7 +139,7 @@ class Bar
         if last_end and obj.position > last_end + 1 # extra 1 for rounding errors when in tuplet
           fixed += fill(last_end, obj.position - last_end, voice)
         end
-        last_end = obj.position + obj.real_duration
+        last_end = obj.position + obj.real_duration.to_i
       end
       fixed << obj
     end
@@ -275,7 +278,9 @@ class Bar
     nr.each { |obj| obj.tuplets += tuplets.select { |objt| is_in?(obj, objt) } }
     nr.each { |obj| obj.tuplets.each { |objt| objt.notes << obj } }
     tuplets.each{|objt| objt.notes.last.ends_tuplet += 1}
+
     nr.each{|obj| obj.process}
+    assign_lyrics
 
     fix_overfull_bar
     assign_grace_notes
@@ -359,10 +364,14 @@ class Bar
   # Returns the first NoteRest to which point +pos+ belongs or nil if no
   # such NoteRest is found.
   def get_noterest_at(pos)
+    assert(!pos.nil?)
     noterests = @objects.select{|obj| (obj.is_a?(NoteRest) and (not obj.grace))}
     result = noterests.find do |nr|
+      assert(!nr.position.nil?)
+      assert(!nr.real_duration.nil?)
+      assert(nr.real_duration.is_a?(Duration))
       (nr.position == pos) or \
-        (nr.position < pos and nr.position + nr.real_duration > pos)
+        (nr.position < pos and nr.position + nr.real_duration.to_i > pos)
     end
     result
   end
@@ -380,6 +389,28 @@ class Bar
       end
     end
     return argmin, min
+  end
+
+  # Returns the previous bar
+  def prev
+    parent.prev_bar(self)
+  end
+
+  def last_noterest
+    noterests = objects.select {|obj| obj.is_a?(NoteRest)}
+    return noterests.last unless noterests.empty?
+    return nil if !prev
+    return prev.last_noterest
+  end
+
+  def prev_noterest(nr)
+    assert(nr.is_a?(NoteRest))
+    noterests = objects.select {|obj| obj.is_a?(NoteRest)}
+    idx = noterests.index(nr)
+    return nil if idx.nil?
+    return noterests[idx - 1] if idx > 0
+    return nil if !prev
+    return prev.last_noterest
   end
 
   def to_s
