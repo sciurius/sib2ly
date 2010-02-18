@@ -304,6 +304,26 @@ class Score < Translatable
   def num_bars
     @system_staff.voices.first.bars.length
   end
+
+  def pitch_classes
+    s = ""
+    system_staff.voices.first.bars.each_with_index do |_, index|
+      classes = Array.new(12, 0)
+      staves.each do |staff|
+        staff.voices.each do |voice|
+          bar = voice[index]
+          noterests = bar.objects.select {|obj| obj.is_a?(NoteRest) and !obj.hidden}
+          noterests.each do |nr|
+            nr.notes.each do |n|
+              classes[n.pitch % 12] += 1
+            end
+          end
+        end
+      end
+      s << classes.join(' ') << "\n"
+    end
+    s
+  end
 end
 
 

@@ -55,11 +55,12 @@ $opts = Trollop::options do
 	version logo
 	banner logo + "Usage: ruby #{File.basename($0)} [options] filename\n\n"
 	opt :output,	"Output file name", :type => String
-#  opt :concise, "Produce more concise output"
+  #  opt :concise, "Produce more concise output"
 	opt :list, 		"List staves only and exit"
 	opt :staff,		"Process the specified staff only", :type => :int
 	opt :info, 		"Display score information"
 	opt :verbose, "Display verbose mesages"
+  opt :pitches, "Collect pitch statistics"
 end
 
 $opts[:input] = ARGV.pop
@@ -70,9 +71,7 @@ if !$opts[:input]
   error "Invalid input file name."
 	Process.exit
 end
-if !$opts[:output]
-	$opts[:output] = make_out_filename($opts[:input])
-end
+
 
 puts "Reading the score from #{$opts[:input]}..."
 fin = File.new($opts[:input], 'r')
@@ -93,9 +92,18 @@ if $opts[:info]
   # Display score information
   puts score.info
 else
-  file = File.open($opts[:output], 'w')
-  $ly = LilypondFile.new(file)
-  score.to_ly
-  puts "Done ;-P"
+  if $opts[:pitches]
+    puts score.pitch_classes
+  else
+    if !$opts[:output]
+      $opts[:output] = make_out_filename($opts[:input])
+    end
+    verbose "Writing output to #{$opts[:output]}"
+    File.open($opts[:output], 'w') do |file|
+      $ly = LilypondFile.new(file)
+      score.to_ly
+    end
+    puts "Done ;-P"
+  end
 end
 

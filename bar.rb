@@ -41,7 +41,8 @@ class Bar
     end
     sel.each do |obj|
       # TODO: Replace this with a proper copying mechanism.
-      bar.add(obj.clone)
+      clone = obj.clone
+      bar.add(clone)
       #bar.add(Marshal.load( Marshal.dump(obj) ))
     end
     bar

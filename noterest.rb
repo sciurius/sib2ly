@@ -49,6 +49,7 @@ class NoteRest < BarObject
     super
     @duration = @duration.dup
     @real_duration = @real_duration.dup if @real_duration
+    @texts = @texts.dup
   end
 
 	# Number of semitones by which this NoteRest is transposed in the transposing
@@ -63,7 +64,7 @@ class NoteRest < BarObject
 				return 0
 			end
 		else
-			@notes.first.transposition
+			notes.first.transposition
 		end
 	end
 
@@ -362,16 +363,24 @@ class NoteRest < BarObject
   end
 
   def is_rest?
-    return @notes.empty?
+    return notes.empty?
   end
 
   def is_chord?
     return @notes.length > 1
   end
 
+  def begins_spanners
+    first.begins_spanners
+  end
+
+  def ends_spanners
+    second.enends_spanners
+  end
+
 	# Return the lowest note in the NoteRest, by absolute pitch.
   def lowest
-    return @notes.sort{|a, b| a.pitch <=> b.pitch}.first;
+    return notes.sort{|a, b| a.pitch <=> b.pitch}.first;
   end
 
   # Determine if this NoteRest overlaps temporally with another.
@@ -397,20 +406,12 @@ class DoubleTremolo < NoteRest
 		# TODO: Check what happens if a double tremolo is in a tuplet.
   end
 
-  def is_rest?
-    false
+  def notes
+    first.notes
   end
 
   def grace_notes
     first.grace_notes
-  end
-
-  def transposition
-    first.transposition
-  end
-
-  def lowest
-    first.lowest
   end
 
   def to_ly
