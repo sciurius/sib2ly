@@ -234,11 +234,6 @@ class NoteRest < BarObject
     s
   end
 
-	# Is this NoteRest the second in a a double-tremolo?
-  #  def ends_tremolo
-  #    prev and prev.starts_tremolo
-  #  end
-
   def begin_octavation_to_ly
     return '' if @begins_spanners.empty?
     return @begins_spanners.select{|sp| sp.is_a?(OctavaLine)}.inject('') do |s, sp|
@@ -388,8 +383,6 @@ class NoteRest < BarObject
     return @notes.length > 1
   end
 
-
-
 	# Return the lowest note in the NoteRest, by absolute pitch.
   def lowest
     return notes.sort{|a, b| a.pitch <=> b.pitch}.first;
@@ -405,52 +398,3 @@ class NoteRest < BarObject
     [notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
   end
 end
-
-#class DoubleTremolo < NoteRest
-#  attr_reader :first, :second, :duration, :real_duration
-#  def initialize(first, second)
-#    @first = first
-#    @second = second
-#    @position = @first.position
-#    @duration = Duration.new(@first.duration.to_i + @second.duration.to_i)
-#    @real_duration = Duration.new(@duration.to_i)
-#    assert(@duration.is_a?(Duration))
-#		# TODO: Check what happens if a double tremolo is in a tuplet.
-#  end
-#
-#  def notes
-#    first.notes
-#  end
-#
-#  def grace_notes
-#    first.grace_notes
-#  end
-#
-#    def begins_spanners
-#    first.begins_spanners
-#  end
-#
-#  def ends_spanners
-#    second.enends_spanners
-#  end
-#
-#  def to_ly
-#    s = ""
-#    s << voice_mode_to_ly
-#    td = get_tremolo_duration(first.duration.to_i * 2, first.double_tremolos)
-#    s << '\repeat tremolo ' << (first.duration.to_i / td).to_i.to_s << ' {'
-#    first.duration = td
-#    second.duration = td
-#    #    elsif ends_tremolo # second NoteRest in a double tremolo
-#    #      td = get_tremolo_duration(duration.to_i * 2, prev.double_tremolos)
-#    s << first.to_ly
-#    s << second.to_ly
-#    s << "} "
-#    s
-#  end
-#
-#  def process
-#    first.process
-#    second.process
-#  end
-#end
