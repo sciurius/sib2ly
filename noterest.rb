@@ -25,7 +25,7 @@ class NoteRest < BarObject
     :ottavation, :beam,
 		:ends_bar, :bar
 	attr_accessor :begins_transposition, :ends_transposition, :one_voice, :grace_notes, :slurred,
-		:ends_tuplet, :lyrics
+		:ends_tuplet, :lyrics, :prev, :next
   def initialize
     @tied = false
     @slurred = 0
@@ -74,7 +74,9 @@ class NoteRest < BarObject
 	end
 
 	def ends_tremolo?
-    @ends_tremolo ||= prev && prev.begins_tremolo?
+    return @ends_tremolo unless @ends_tremolo.nil?
+    @ends_tremolo = (prev && (prev.bar == self.bar) && prev.begins_tremolo?) ? true : false
+    @ends_tremolo
 	end
 
   def initialize_from_xml(xml)
@@ -97,15 +99,15 @@ class NoteRest < BarObject
     nr
   end
 
-  # Returns the preceding NoteRest
-  def prev
-    bar.prev_noterest(self)
-  end
-
-  # Returns the next NoteRest
-  def next
-    bar.next_noterest(self)
-  end
+  #  # Returns the preceding NoteRest
+  #  def prev
+  #    bar.prev_noterest(self)
+  #  end
+  #
+  #  # Returns the next NoteRest
+  #  def next
+  #    bar.next_noterest(self)
+  #  end
 
 	def tuplets=(tp)
 		assert(tp, "Trying to assign nil to tuplets.")

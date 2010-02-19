@@ -31,6 +31,7 @@ class Text < BarObject
 
 		# Make sure @text is not nil
 		@text = "" unless @text
+    @text.strip!
 		@style_id = xml["StyleId"]
 	end
 

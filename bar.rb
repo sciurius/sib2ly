@@ -56,7 +56,7 @@ class Bar
 
   # If the bar is musically empty (e.g. bar rest)
   def musically_empty?
-    @objects.length == 1 and @objects.first.is_a?(BarRest)
+    objects.length == 1 and objects.first.is_a?(BarRest)
   end
 
   def contains_music?
@@ -68,7 +68,12 @@ class Bar
   # Remove the specified objects from the bar.
   def remove(objs)
     @objects -= [*objs]
+    link_noterests
   end
+
+  #  def -(objs)
+  #    @objects - [*objs]
+  #  end
 
   # Add the specified objects to the bar.
   def add(objs)
@@ -77,14 +82,22 @@ class Bar
       @objects << obj
     end
     sort_objects
-    update_cache
+    link_noterests # TODO: Only call it when adding NoteRests?
   end
 
-  def update_cache
-    prev_noterest_cache = {}
-    noterests = objects.select{|obj| obj.is_a?(NoteRest)}
-    noterests.each{|nr| prev_noterest_cache[nr] = prev_noterest(nr)}
+  def link_noterests
+    objects.select{|obj| obj.is_a?(NoteRest) and (not obj.grace)}.each do |nr|
+      nr.prev = prev_noterest(nr)
+    end
+    objects.select{|obj| obj.is_a?(NoteRest) and (not obj.grace)}.each do |nr|
+      nr.next = next_noterest(nr)
+    end
   end
+  #  def update_cache
+  #    prev_noterest_cache = {}
+  #    noterests = objects.select{|obj| obj.is_a?(NoteRest)}
+  #    noterests.each{|nr| prev_noterest_cache[nr] = prev_noterest(nr)}
+  #  end
   
   #  def insert(idx, objs)
   #    objs = [*objs]
@@ -263,9 +276,9 @@ class Bar
     
 
     # move KeySignature to the beginning of the bar
-#    ks = objects.select{|obj| obj.is_a?(KeySignature)}
-#    @objects -= ks
-#    @objects = ks + @objects
+    #    ks = objects.select{|obj| obj.is_a?(KeySignature)}
+    #    @objects -= ks
+    #    @objects = ks + @objects
 
 
     tuplets = @objects.select{|objt| objt.is_a?(Tuplet)}
@@ -311,52 +324,52 @@ class Bar
     @objects -= graces
   end
 
-#  # Determine which NoteRests start a double-tremolo
-#  def compute_double_tremolo_starts_ends
-#    nr = @objects.select{|obj| obj.is_a?(NoteRest)}
-#
-#    num_starts = 0
-#    num_ends   = 0
-#    starts = false
-#    # For each NoteRest in the bar
-#    tremolos = []
-#    nr.each do |n|
-#      # A NoteRest starts a double tremolo if double_tremolos is set and
-#      # the previous NoteRest does not start a double tremolo.
-#      if n.double_tremolos > 0 and !starts
-#        n.starts_tremolo = starts = true
-#        num_starts = num_starts + 1
-#      else
-#        starts = n.starts_tremolo = false
-#      end
-#    end
-#
-#    nr.each do |n|
-#      # A NoteRest ends a tremolo if the previous NoteRest
-#      # starts a double tremolo.
-#      if n.prev and n.prev.starts_tremolo
-#        n.ends_tremolo  = true
-#        num_ends = num_ends + 1
-#        tremolos << DoubleTremolo.new(n.prev, n)
-#      end
-#    end
-#
-#    # Check if the number of tremolo starts equals the number of ends
-#    unless num_starts == num_ends
-#      puts "WARNING! I have found a double tremolo that does not have ``the second part'' to it, in bar " + @number.to_s
-#      puts "Check, in the original Sibelius score, if some notes or rests in this bar have an incomlete tremolo."
-#      # This bug occurs in e.g. /Example Scores/Hebrides.sib
-#    end
-#
-#    # Delete all notes that are in double tremolos from the bar
-#    tremolos.each do |trem|
-#      @objects.delete(trem.first)
-#      @objects.delete(trem.second)
-#    end
-#
-#    # Add tremolos to the bar instead
-#    add(tremolos)
-#  end
+  #  # Determine which NoteRests start a double-tremolo
+  #  def compute_double_tremolo_starts_ends
+  #    nr = @objects.select{|obj| obj.is_a?(NoteRest)}
+  #
+  #    num_starts = 0
+  #    num_ends   = 0
+  #    starts = false
+  #    # For each NoteRest in the bar
+  #    tremolos = []
+  #    nr.each do |n|
+  #      # A NoteRest starts a double tremolo if double_tremolos is set and
+  #      # the previous NoteRest does not start a double tremolo.
+  #      if n.double_tremolos > 0 and !starts
+  #        n.starts_tremolo = starts = true
+  #        num_starts = num_starts + 1
+  #      else
+  #        starts = n.starts_tremolo = false
+  #      end
+  #    end
+  #
+  #    nr.each do |n|
+  #      # A NoteRest ends a tremolo if the previous NoteRest
+  #      # starts a double tremolo.
+  #      if n.prev and n.prev.starts_tremolo
+  #        n.ends_tremolo  = true
+  #        num_ends = num_ends + 1
+  #        tremolos << DoubleTremolo.new(n.prev, n)
+  #      end
+  #    end
+  #
+  #    # Check if the number of tremolo starts equals the number of ends
+  #    unless num_starts == num_ends
+  #      puts "WARNING! I have found a double tremolo that does not have ``the second part'' to it, in bar " + @number.to_s
+  #      puts "Check, in the original Sibelius score, if some notes or rests in this bar have an incomlete tremolo."
+  #      # This bug occurs in e.g. /Example Scores/Hebrides.sib
+  #    end
+  #
+  #    # Delete all notes that are in double tremolos from the bar
+  #    tremolos.each do |trem|
+  #      @objects.delete(trem.first)
+  #      @objects.delete(trem.second)
+  #    end
+  #
+  #    # Add tremolos to the bar instead
+  #    add(tremolos)
+  #  end
 
   # Returns the first NoteRest to which point +pos+ belongs or nil if no
   # such NoteRest is found.
@@ -384,13 +397,13 @@ class Bar
     return argmin, min
   end
 
-#  # Returns the previous bar
-#  def prev
-#    parent.prev_bar(self)
-#  end
+  #  # Returns the previous bar
+  #  def prev
+  #    parent.prev_bar(self)
+  #  end
 
   def last_noterest
-    noterests = objects.select {|obj| obj.is_a?(NoteRest)}
+    noterests = objects.select {|obj| (obj.is_a?(NoteRest) and (not obj.grace))}
     return noterests.last unless noterests.empty?
     return nil if !prev
     return prev.last_noterest
@@ -401,7 +414,7 @@ class Bar
     #    puts "In cache" if p
     return p if p
     #    puts "Cache miss"
-    noterests = objects.select {|obj| obj.is_a?(NoteRest)}
+    noterests = objects.select {|obj| (obj.is_a?(NoteRest) and (not obj.grace))}
     idx = noterests.index(nr)
     return nil if idx.nil?
     if idx > 0
@@ -416,7 +429,7 @@ class Bar
   end
 
   def next_noterest(nr)
-    objects.select {|obj| obj.is_a?(NoteRest)}.find {|n| n.prev == nr}
+    objects.select {|obj| (obj.is_a?(NoteRest) and (not obj.grace))}.find {|n| n.prev == nr}
   end
 
   def to_s
