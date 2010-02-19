@@ -28,7 +28,7 @@ require 'assert'
 require 'trollop'
 
 #include Benchmark
-#require 'profile'
+require 'profiler'
 exit if Object.const_defined?(:Ocra)
 
 class LilypondFile

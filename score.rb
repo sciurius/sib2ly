@@ -250,7 +250,10 @@ class Score < Translatable
       #	end
 
 			st = sin + " = " + brackets("{\n", "\n} % #{sin}\n") do |s|
+        #Profiler__::start_profile
         s << staff.to_ly
+        #Profiler__::stop_profile
+        #Profiler__::print_profile($stderr)
       end
       ly st
 

@@ -28,8 +28,9 @@ class Voice
   def self.filter_copy(voice, bars, &fun)
     v = self.new(voice)
     v.voice = voice
-    bars.each do |bar|
+    bars.each_with_index do |bar, idx|
       v.bars << Bar.copy(bar, fun, v)
+      v.bars.last.prev = (idx > 0 ? v.bars[idx - 1] : nil)
     end
     v 
   end
@@ -317,13 +318,14 @@ class Voice
 
   def prev_bar(bar)
     idx = bars.index(bar)
-    return nil if idx.zero?
+    return nil if idx.nil? or idx.zero?
     return bars[idx - 1]
   end
 
   def to_ly
     v = brackets("{\n", "}") do |s|
       @bars.each do |bar|
+        #puts bar.number
         s << bar.to_ly
       end
       s

@@ -46,14 +46,21 @@ class Staff < Translatable
 		return if $opts[:list] # Do not proceed to read bars
     
 		puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
-    (xml/"Bar").each do |bar|
-      @bars << Bar.new_from_xml(bar, self)
+    (xml/"Bar").each_with_index do |bar, idx|
+      bars << Bar.new_from_xml(bar, self)
+      bars.last.prev = (idx > 0 ? bars[idx - 1] : nil)
     end
   end
 
   # Return the i-th bar
   def [](i)
     @bars[i]
+  end
+
+  def prev_bar(bar)
+    idx = bars.index(bar)
+    return nil if idx.nil? or idx.zero?
+    return bars[idx - 1]
   end
 
 	# Make a valid LilyPond identifier from the instrument name.
@@ -107,21 +114,26 @@ class Staff < Translatable
           # Select non-hidden, non-grace NotRests and DoubleTremolos
           # from i-th Bar in this voice
           objects += voice.bars[i].objects.select do |obj|
-            (obj.is_a?(DoubleTremolo) or (obj.is_a?(NoteRest) and \
-                  (not obj.grace) and (not obj.hidden)))
+            #            (obj.is_a?(DoubleTremolo) or (obj.is_a?(NoteRest) and \
+            #                  (not obj.grace) and (not obj.hidden)))
+            ((obj.is_a?(NoteRest) and !obj.grace and !obj.hidden))
           end
         end
 
         voices.each do |voice|
           voice.bars[i].objects.each do |this|
             if this.is_a?(NoteRest) and !this.grace and !this.hidden
-
-              overlapping = objects.find do |other|
-                ((other.voice != this.voice) and (!other.hidden) and \
-                  this.overlaps?(other))
+              overlapping = objects.select{|obj| obj.voice != this.voice}.find do |other|
+                ov = this.overlaps?(other)
+                if this.begins_tremolo?
+                  ov = ov || this.next.overlaps?(other)
+                end
+                if this.ends_tremolo?
+                  ov = ov || this.prev.overlaps?(other)
+                end
+                ov
               end
               this.one_voice = overlapping ? false : true
-
             end
           end
         end
@@ -151,7 +163,7 @@ class Staff < Translatable
     false
   end
 
-	# Is there something to typeset in chord mode?
+  # Is there something to typeset in chord mode?
   def chords_present?
     if @chords and @chords.chord_count > 0
       return true
@@ -170,7 +182,7 @@ class Staff < Translatable
   def to_ly
     # s = clef2ly(@initial_clef)
 
-		s = ""	
+    s = ""
     if !@is_system_staff and (polyphonic? or lyrics_present?)
       sin = safe_instrument_name
       v = brackets("<<", "\n>>") do |ss|

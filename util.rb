@@ -93,29 +93,6 @@ def get_tremolo_duration(d, trem)
   end
 end
 
-# def fill(pos, duration, voice, noterest = nil)
-#  nrs = []
-#  # creates an array of NoteRests to fill a duration
-#  (0..10).each do |i|
-#    pow = 2**i
-#    if duration & pow != 0
-#      if not noterest
-#        nr = NoteRest.new
-#        nr.hidden = true
-#      else
-#        nr = NoteRest.copy(noterest)
-#      end
-#      nr.position = pos
-#      pos += pow
-#      nr.duration = pow
-#      nr.voice = voice
-#      nr.process
-#      nrs << nr
-#    end
-#  end
-#  nrs
-# end
-
 # Returns an array of NoteRests that are needed to fill a "duration" long
 # segment starting at "pos"
 def fill(pos, duration, voice, noterest = nil)
@@ -145,7 +122,6 @@ def fill(pos, duration, voice, noterest = nil)
   end
   nrs
 end
-
 
 
 def make_out_filename(in_file)

@@ -36,14 +36,14 @@ class Note
 	end
 
 	def previous_note=(note)
-		assert(((nil == note) or note.is_a?(Note)), "Trying to assign a non-Note object to previous_note")
+		assert((nil == note) || note.is_a?(Note), "Trying to assign a non-Note object to previous_note")
 		@previous_note = note
 	end
 
   def to_ly
     s = ""
     if @bracketed
-      s << '\parenthesize '
+      s << "\\parenthesize "
     end
     s << written_name2ly(@name)
     if @previous_note
