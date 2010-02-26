@@ -400,3 +400,4 @@ class NoteRest < BarObject
     [notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
   end
 end
+
