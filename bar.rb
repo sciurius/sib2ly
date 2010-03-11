@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-%w{lyricitem barobject noterest barrest keysignature tuplet}.each {|obj| require obj}
+%w{lyricitem barobject noterest barrest keysignature tuplet specialbarline barline_tweak}.each {|obj| require obj}
 class Bar
   attr_accessor :length, :number, :system_staff, :time_signature,
     :nr_count, :bar_voice, :parent, :prev
@@ -56,7 +56,8 @@ class Bar
 
   # If the bar is musically empty (e.g. bar rest)
   def musically_empty?
-    objects.length == 1 and objects.first.is_a?(BarRest)
+    obj_f = objects.select{|obj| !obj.is_a?(BarlineTweak)}
+    obj_f.length == 1 and obj_f.first.is_a?(BarRest)
   end
 
   def contains_music?
@@ -128,15 +129,15 @@ class Bar
       #      end
     end
     # write objects
-    s << objects.select {
-      |obj| not (obj.is_a?(Text) or obj.is_a?(Tuplet))
-    }.map {|obj| obj.to_ly}.join(' ');
+    s << objects.select { |obj| not (obj.is_a?(Text) or obj.is_a?(Tuplet))}.map do
+      |obj| obj.to_ly
+    end.join(' ');
     #    # barlines go at the end of the bar
     #    @objects.select{|obj| obj.is_a?(SpecialBarline)}.each do |obj|
     #      s << obj.to_ly
     #    end
     # bar bumber
-    s + " |% #{number}\n"
+    s + " % #{number}\n"
   end
 
   def fix_missing_nr
@@ -295,6 +296,8 @@ class Bar
     fix_overfull_bar
     assign_grace_notes
     fix_missing_nr
+    move_barlines
+    fix_barlines if @parent.next_bar(self).nil?
     assign_texts     # assign text to NoteRests
     assign_lyrics
     #compute_double_tremolo_starts_ends
@@ -322,6 +325,48 @@ class Bar
       owner.grace_notes << grace if owner
     end
     @objects -= graces
+  end
+
+  def move_barlines
+    prev_bar = @parent.prev_bar(self)
+    @objects.select{|obj| obj.is_a?(SpecialBarline) and obj.position.eql?(0)}.each do |barline|
+      barline.position = prev_bar.length
+      if prev_bar
+        prev_bar.add(barline)
+      end
+      remove(barline)
+    end
+    prev_bar.fix_barlines if prev_bar
+  end
+
+  def fix_barlines
+    end_barlines = @objects.select{|obj| obj.is_a?(SpecialBarline) and obj.position.eql?(@length)}
+    if end_barlines.length.eql?(2)
+      #start + end repeat
+      remove(end_barlines.first)
+			end_barlines.last.barline_type = "DoubleRepeat"
+    end
+    if end_barlines.length.zero?
+      standart_barline = SpecialBarline.new
+      standart_barline.barline_type = "Normal"
+      standart_barline.position = @length
+      add(standart_barline)
+    end
+    #add tweaks for some barlines
+    @objects.select{|obj| obj.is_a?(SpecialBarline) and ["Short", "BetweenStaves"].include?(obj.barline_type) }.each do |obj|
+      verbose("Creating tweaks to "+obj.to_s)
+      ss = BarlineTweak.new
+      ss.tweak_type = obj.barline_type
+      ss.position = @length
+      add ss
+      if (next_bar = @parent.next_bar(self))
+        ss = BarlineTweak.new
+        ss.tweak_type = obj.barline_type+"End"
+        ss.position = next_bar.length
+        next_bar.add ss
+      end
+    end
+    #sort_objects
   end
 
   #  # Determine which NoteRests start a double-tremolo

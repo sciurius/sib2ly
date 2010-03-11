@@ -24,6 +24,10 @@ class SpecialBarline < BarObject
     @barline_type = xml["BarlineType"]
   end
 
+  def new
+    super
+  end
+
   def SpecialBarline.new_from_xml(xml)
     sb = SpecialBarline.new
     sb.initialize_from_xml(xml)
@@ -38,25 +42,38 @@ class SpecialBarline < BarObject
   end
 
   def to_ly
-    s = "\\bar \""
+    bar = "\\bar \""
     case @barline_type
     when "Final"
-      s << "|."
+      bar << "|."
     when "Double"
-      s << "||"
+      bar << "||"
     when "Dotted"
-      s << ":"
+      bar << "dashed" #sibelus 'dotted' means 'dashed'
     when "StartRepeat"
-      s << "|:"
+      bar << "|:"
     when "EndRepeat"
-      s << ":|"
+      bar << ":|"
+    when "DoubleRepeat"
+      bar << ":|:"
     when "Invisible"
-      s << ""
+      bar << ""
+    when "Ticks"
+      bar << "'"
+    when "Normal", "Short", "BetweenStaves"
+      bar = ""
     else
       warning "Unknown bar line type: " + @barline_type
-      s << "|"
+      bar << "|"
     end
-    s << "\" "
-    return s
+    if bar != ""
+      bar << "\" "
+    end
+    bar << " | "
+    return bar
+  end
+
+  def to_s
+    return "Barline at " + @bar.to_s + ", position " + @position.to_s + ", type " + @barline_type
   end
 end

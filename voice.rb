@@ -322,6 +322,12 @@ class Voice
     return bars[idx - 1]
   end
 
+  def next_bar(bar)
+    idx = bars.index(bar)
+    return nil if idx.nil? or idx.eql?(bars.length-1)
+    return bars[idx + 1]
+  end
+
   def to_ly
     v = brackets("{\n", "}") do |s|
       @bars.each do |bar|

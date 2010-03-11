@@ -20,12 +20,12 @@ PREAMBLE = "\\version \"2.12.2\"\n"+
 	"  \\context\n"+
 	"  {\n"+
 	"    \\RemoveEmptyStaffContext\n"+
-	"    \\override VerticalAxisGroup #'remove-first = ##t\n"+
+	"    \\override VerticalAxisGroup #'remove-empty = ##f\n"+
   "  }\n"+
 	"  \\context\n"+
 	"  {\n"+
 	"    \\RemoveEmptyRhythmicStaffContext\n"+
-	"    \\override VerticalAxisGroup #'remove-first = ##t\n"+
+	"    \\override VerticalAxisGroup #'remove-empty = ##f\n"+
   "  }\n"+
 	"% \\context { \\Staff \\set hairpinToBarline = ##t }\n"+
   "  \\context { \\Staff \\override VerticalAxisGroup #'minimum-Y-extent = #'(-3.0 . 3.0) }\n"+
