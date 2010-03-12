@@ -230,3 +230,6 @@ DIATONIC = {
   "b" => 6,
   "h" => 6  # Just in case
 }
+
+# Max grace to one note
+MAXGRACE = 64

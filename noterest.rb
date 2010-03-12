@@ -24,8 +24,8 @@ class NoteRest < BarObject
     :single_tremolos, :double_tremolos,
     :ottavation, :beam,
 		:ends_bar, :bar
-	attr_accessor :begins_transposition, :ends_transposition, :one_voice, :grace_notes, :slurred,
-		:ends_tuplet, :lyrics, :prev, :next
+	attr_accessor :begins_transposition, :ends_transposition, :one_voice, :grace_notes, :grace_slurred, :slurred,
+		:ends_tuplet, :lyrics, :prev, :next, :internal_priority
   def initialize
     @tied = false
     @slurred = 0
@@ -38,10 +38,12 @@ class NoteRest < BarObject
     @duration = 0
     @ends_tuplet = 0
     @grace_notes = []
+    @grace_slurred = false
     @lyrics = nil
     @single_tremolos = 0
     @double_tremolos = 0
     @ottavation = 0
+    @internal_priority = 0
   end
 
   def initialize_copy(source)
@@ -194,10 +196,9 @@ class NoteRest < BarObject
 		s = ""
 		# index of the first non-hidden grace note
 		first_non_hidden = @grace_notes.index(@grace_notes.find{|obj| !obj.hidden})
-
-		if !first_non_hidden or @slurred > 0
+    if !@grace_slurred
 			s << '\grace '
-		elsif @grace_notes.first.acciaccatura
+		elsif @grace_notes[first_non_hidden].acciaccatura
 			s << '\acciaccatura '
 		else
 			s << '\appoggiatura '
@@ -398,6 +399,10 @@ class NoteRest < BarObject
 
   def to_s
     [notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
+  end
+
+  def priority
+    internal_priority
   end
 end
 

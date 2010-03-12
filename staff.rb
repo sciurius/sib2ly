@@ -74,21 +74,21 @@ class Staff < Translatable
   end
 
   def split_into_voices
-    verbose("Splitting staves into voices.")
+    verbose("Splitting stave #{to_s} into voices.")
     unless @is_system_staff
-      @lyrics << VoiceLyrics.filter_copy(1, @bars) {|obj| obj.voice == 1}
-      @lyrics << VoiceLyrics.filter_copy(2, @bars) {|obj| obj.voice == 2}
+      @lyrics << VoiceLyrics.filter_copy(self, 1, @bars) {|obj| obj.voice == 1}
+      @lyrics << VoiceLyrics.filter_copy(self, 2, @bars) {|obj| obj.voice == 2}
     end
 
-    @voices << Voice.filter_copy(1, @bars) {|obj| obj.voice == 1 or obj.voice == 0 or obj.is_a?(OctavaLine)}
+    @voices << Voice.filter_copy(self, 1, @bars) {|obj| obj.voice == 1 or obj.voice == 0 or obj.is_a?(OctavaLine)}
     unless @is_system_staff
-      @voices << Voice.filter_copy(2, @bars) {|obj| obj.voice == 2 or obj.is_a?(OctavaLine)}
+      @voices << Voice.filter_copy(self, 2, @bars) {|obj| obj.voice == 2 or obj.is_a?(OctavaLine)}
     end
-		ic = Clef.new(@initial_clef)
+    ic = Clef.new(@initial_clef)
 		ic.position = 0
 		@voices.first[0].add(ic)
     # Create a new voice for chords and populate it with chord symbols
-    @chords = VoiceChords.filter_copy(1, @bars) {|obj| (obj.is_a?(Text) and obj.style_id == "text.staff.space.chordsymbol")}
+    @chords = VoiceChords.filter_copy(self, 1, @bars) {|obj| (obj.is_a?(Text) and obj.style_id == "text.staff.space.chordsymbol")}
 
   end
 
@@ -204,5 +204,11 @@ class Staff < Translatable
       s << voices.first.to_ly
     end
     s
+  end
+
+  def to_s
+    return "SystemStaff" if is_system_staff
+    return instrument_name unless instrument_name == ""
+    super
   end
 end

@@ -50,7 +50,7 @@ end
 
 
 logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + \
-  "  Sibelius to LilPond translator    (c) 2010 Kirill Sidorov\n\n"
+  "  Sibelius to LilyPond translator    (c) 2010 Kirill Sidorov\n\n"
 $opts = Trollop::options do
 	version logo
 	banner logo + "Usage: ruby #{File.basename($0)} [options] filename\n\n"

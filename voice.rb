@@ -18,21 +18,26 @@ require 'relative'
 require 'timesignature'
 
 class Voice
-  attr_accessor :bars, :spanners, :voice, :fn
+  attr_accessor :bars, :spanners, :voice, :fn, :staff, :has_obj
   def initialize(voice)
     @voice = voice
     @bars = []
-    @nr_count = 0    
+    @nr_count = 0
+    @staff = nil
   end
 
-  def self.filter_copy(voice, bars, &fun)
+  def self.filter_copy(staff, voice, bars, &fun)
     v = self.new(voice)
     v.voice = voice
+    v.staff = staff
+    @has_obj = false;
     bars.each_with_index do |bar, idx|
       v.bars << Bar.copy(bar, fun, v)
+      @has_obj = true unless v.bars.last.objects.select{|obj| fun.call(obj)}.length.zero?
+      v.bars.last.bar_voice = voice
       v.bars.last.prev = (idx > 0 ? v.bars[idx - 1] : nil)
     end
-    v 
+    v
   end
 
   def [](index)
@@ -99,7 +104,8 @@ class Voice
 					tb.position = nr.position
 					te = TranspositionEnd.new
 					te.position = prev.position_after
-					rb = RelativeBegin.new(nr.lowest)
+          nrb = nr.grace_notes.length ? nr.grace_notes.first : nr
+					rb = RelativeBegin.new(nrb.lowest)
 					rb.position = nr.position
 					re = RelativeEnd.new
 					re.position = prev.position_after
@@ -122,7 +128,8 @@ class Voice
 				fn = noterests.first
 				tb = TranspositionBegin.new(nonrests.first.transposition)
 				tb.position = fn.position
-				rb = RelativeBegin.new(nonrests.first.lowest)
+        nrb = nonrests.first.grace_notes.length ? nonrests.first.grace_notes.first : nonrests.first
+				rb = RelativeBegin.new(nrb.lowest)
 				rb.position = fn.position
 				fn.bar.add(tb)
 				fn.bar.add(rb)
@@ -312,8 +319,22 @@ class Voice
     assign_spanners
     assign_time_signatures
 #    handle_start_repeat_barlines
+    convert_slurs_over_grace
 		detect_transpositions
     #puts @nr_count
+  end
+
+  #convert slurs over slurred grace notes to phrasing
+  def convert_slurs_over_grace
+    slurs = spanners.select{|sp| sp.is_a?(Slur)}
+    slurs.each do |slur|
+      slurred_nr = noterests_under_spanner(slur)
+      conv = false
+      slurred_nr.each do |nr|
+        conv = true if nr.grace_slurred
+      end
+      slur.is_phrasing = conv
+    end
   end
 
   def prev_bar(bar)
@@ -337,5 +358,9 @@ class Voice
       s
     end
     v
+  end
+
+  def to_s
+    "#{voice} (#{self.class})"
   end
 end

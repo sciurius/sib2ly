@@ -140,3 +140,10 @@ def brackets(open, close)
   s << close
   s.join
 end
+
+def backtrace
+  raise "e"
+  rescue => detail
+    puts detail.backtrace[1..-1]
+  puts
+end

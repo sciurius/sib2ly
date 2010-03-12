@@ -24,6 +24,7 @@ class Bar
       length, bar_voice, number, system_staff, parent
     @objects = [] #[BarEnd.new(self)]
     @prev_noterest_cache = {}
+    @grace_add_counter = MAXGRACE
   end
 
   # Create a bar populated with objects taken from another bar
@@ -81,6 +82,12 @@ class Bar
     [*objs].each do |obj|
       obj.bar = self
       @objects << obj
+      if obj.is_a?(NoteRest) and obj.grace
+        obj.internal_priority = @grace_add_counter;
+        @grace_add_counter += 1
+      else
+        @grace_add_counter = MAXGRACE
+      end
     end
     sort_objects
     link_noterests # TODO: Only call it when adding NoteRests?
@@ -266,7 +273,7 @@ class Bar
   end
 
   def process
-    #puts "Bar.process called for Bar #{number} in voice #{bar_voice}"
+    #puts "Bar.process called for Bar #{number} in voice #{parent} at staff #{parent.staff}"
     fix_multiple_barrests
 
     # remove KeySigature from global except in the first bar
@@ -298,6 +305,8 @@ class Bar
     fix_missing_nr
     move_barlines
     fix_barlines if @parent.next_bar(self).nil?
+    process_empty_slurs
+    #process_double_slurs (when in Sibelius created two identical slurs, it looks as one slur)
     assign_texts     # assign text to NoteRests
     assign_lyrics
     #compute_double_tremolo_starts_ends
@@ -369,6 +378,17 @@ class Bar
     #sort_objects
   end
 
+  def process_empty_slurs
+    slurs = objects.select { |obj| obj.is_a?(Slur) }
+    empty = slurs.select{|obj| obj.start_bar_number == obj.end_bar_number and obj.position == obj.end_position}
+    empty.each do |slur|
+      nr = get_noterest_at(slur.position)
+      unless nr.nil?
+        nr.grace_slurred = true if nr.grace_notes.length
+      end
+    end
+    @objects -= empty
+  end
   #  # Determine which NoteRests start a double-tremolo
   #  def compute_double_tremolo_starts_ends
   #    nr = @objects.select{|obj| obj.is_a?(NoteRest)}

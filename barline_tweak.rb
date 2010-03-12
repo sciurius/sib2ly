@@ -20,7 +20,7 @@ class BarlineTweak < BarObject
   end
 
   def priority
-    return 20 #must be before noterests
+    return 127 #must be before noterests
   end
 
   def new

@@ -18,6 +18,7 @@ require 'voice'
 class VoiceLyrics < Voice
   def process
 #    @bars.each{|bar| bar.assign_lyrics}
+    clear_grace(@bars)
     @bars.each{|bar| bar.process}
     @bars.each do |bar|
       bar.fix_empty_bar(@voice)
@@ -52,6 +53,13 @@ class VoiceLyrics < Voice
     end
 	end
 
+  def clear_grace(bars)
+    bars.each do |bar|
+      bar.objects.select{|obj| obj.is_a?(NoteRest)}.each do |nr|
+        nr.grace_notes = []
+      end
+    end
+  end
 
   def to_ly(voice)
     s = []

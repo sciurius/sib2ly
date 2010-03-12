@@ -46,9 +46,18 @@ end
 
 class Slur < Spanner
   attr_accessor :is_phrasing
+ 
   def initialize
-    @text_begin = "("
-    @text_end = ")"
+    @text_begin = @is_phrasing ? "\(" : "("
+    @text_end = @is_phrasing ? "\)" : ")"
+  end
+
+  def text_begin
+    @is_phrasing ? "\\(" : "("
+  end
+
+  def text_end
+    @is_phrasing ? "\\)" : ")"
   end
 
   def Slur.new_from_xml(xml)

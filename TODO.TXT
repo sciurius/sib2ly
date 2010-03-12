@@ -33,7 +33,7 @@
 # more than two voices
 # trill spanner too long
 # force dynamics to notes
-# slurred grace notes
+## slurred grace notes
 
 
 Из крупного:
