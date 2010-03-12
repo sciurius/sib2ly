@@ -84,15 +84,19 @@ class Voice
     end
   end
 
+  #return ALL noterests, including grace
 	def get_noterests
 		noterests = []
 		@bars.each do |bar|
-			noterests += bar.objects.select{|obj| obj.is_a?(NoteRest)}
+			bar.objects.select{|obj| obj.is_a?(NoteRest)}.each do |nr| 
+        noterests += nr.grace_notes
+        noterests << nr
+      end
 		end
 		noterests
 	end
 
-	def detect_transpositions
+		def detect_transpositions
 		noterests = get_noterests
 		nonrests = noterests.select {|obj| not obj.is_rest?}
 		return if nonrests.empty?
@@ -104,8 +108,7 @@ class Voice
 					tb.position = nr.position
 					te = TranspositionEnd.new
 					te.position = prev.position_after
-          nrb = nr.grace_notes.length ? nr.grace_notes.first : nr
-					rb = RelativeBegin.new(nrb.lowest)
+					rb = RelativeBegin.new(nr.lowest)
 					rb.position = nr.position
 					re = RelativeEnd.new
 					re.position = prev.position_after
@@ -128,8 +131,7 @@ class Voice
 				fn = noterests.first
 				tb = TranspositionBegin.new(nonrests.first.transposition)
 				tb.position = fn.position
-        nrb = nonrests.first.grace_notes.length ? nonrests.first.grace_notes.first : nonrests.first
-				rb = RelativeBegin.new(nrb.lowest)
+				rb = RelativeBegin.new(nonrests.first.lowest)
 				rb.position = fn.position
 				fn.bar.add(tb)
 				fn.bar.add(rb)
