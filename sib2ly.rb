@@ -18,6 +18,7 @@ $:.unshift File.dirname(__FILE__)
 
 require 'rubygems'
 require 'util'
+require 'options'
 require 'version'
 require 'nokogiri'
 require 'translatable'
@@ -62,6 +63,8 @@ $opts = Trollop::options do
 	opt :verbose, "Display verbose mesages"
   opt :pitches, "Collect pitch statistics"
 end
+
+$config = Options.new
 
 $opts[:input] = ARGV.pop
 

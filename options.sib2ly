@@ -1,0 +1,7 @@
+# This is a sib2ly options file
+# lines, started with '#' is comments
+# format is:
+# <variable>=<value>
+#
+
+convert_slurs_over_grace = true

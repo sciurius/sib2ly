@@ -197,11 +197,11 @@ class NoteRest < BarObject
 		# index of the first non-hidden grace note
 		first_non_hidden = @grace_notes.index(@grace_notes.find{|obj| !obj.hidden})
     if !@grace_slurred
-			s << '\grace '
+			s << '\\grace '
 		elsif @grace_notes[first_non_hidden].acciaccatura
-			s << '\acciaccatura '
+			s << '\\acciaccatura '
 		else
-			s << '\appoggiatura '
+			s << '\\appoggiatura '
     end
     if @grace_notes.length > 1
       s << "{"
@@ -387,8 +387,10 @@ class NoteRest < BarObject
   end
 
 	# Return the lowest note in the NoteRest, by absolute pitch.
-  def lowest
-    return notes.sort{|a, b| a.pitch <=> b.pitch}.first;
+  def lowest(use_grace = true)
+    gv = grace_notes.select{|g| !g.hidden};
+    ng = (!use_grace or gv.length.zero?) ? notes : gv.first.notes
+    return ng.sort{|a, b| a.pitch <=> b.pitch}.first;
   end
 
   # Determine if this NoteRest overlaps temporally with another.

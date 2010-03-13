@@ -88,10 +88,7 @@ class Voice
 	def get_noterests
 		noterests = []
 		@bars.each do |bar|
-			bar.objects.select{|obj| obj.is_a?(NoteRest)}.each do |nr| 
-        noterests += nr.grace_notes
-        noterests << nr
-      end
+			noterests += bar.objects.select{|obj| obj.is_a?(NoteRest)}
 		end
 		noterests
 	end
@@ -99,14 +96,16 @@ class Voice
 		def detect_transpositions
 		noterests = get_noterests
 		nonrests = noterests.select {|obj| not obj.is_rest?}
+    lasttb = nil
 		return if nonrests.empty?
 		nonrests.each do |nr|
 			prev = nr.prev_non_rest
 			if prev
 				if prev.transposition != nr.transposition
 					tb = TranspositionBegin.new(nr.transposition)
+          lasttb = tb
 					tb.position = nr.position
-					te = TranspositionEnd.new
+					te = TranspositionEnd.new(lasttb)
 					te.position = prev.position_after
 					rb = RelativeBegin.new(nr.lowest)
 					rb.position = nr.position
@@ -130,6 +129,7 @@ class Voice
         #				noterests.first.begins_transposition = true
 				fn = noterests.first
 				tb = TranspositionBegin.new(nonrests.first.transposition)
+        lasttb = tb
 				tb.position = fn.position
 				rb = RelativeBegin.new(nonrests.first.lowest)
 				rb.position = fn.position
@@ -140,7 +140,7 @@ class Voice
 		end
     #		noterests.last.ends_transposition = true
 		ln = noterests.last
-		te = TranspositionEnd.new
+		te = TranspositionEnd.new(lasttb)
 		te.position = ln.position_after
 		re = RelativeEnd.new
 		re.position = ln.position_after
@@ -321,7 +321,7 @@ class Voice
     assign_spanners
     assign_time_signatures
 #    handle_start_repeat_barlines
-    convert_slurs_over_grace
+    convert_slurs_over_grace if $config["convert_slurs_over_grace"]
 		detect_transpositions
     #puts @nr_count
   end
@@ -331,11 +331,18 @@ class Voice
     slurs = spanners.select{|sp| sp.is_a?(Slur)}
     slurs.each do |slur|
       slurred_nr = noterests_under_spanner(slur)
+      slurred_nr.shift #allow slur to first note
       conv = false
-      slurred_nr.each do |nr|
-        conv = true if nr.grace_slurred
+      if $config["convert_slurs_over_grace"]
+        slurred_nr.each do |nr|
+          conv = true if nr.grace_slurred
+        end
+      else
+        slurred_nr.each do |nr|
+          nr.grace_slurred = false
+        end
       end
-      slur.is_phrasing = conv
+      slur.is_phrasing = conv and $config["convert_slurs_over_grace"]
     end
   end
 

@@ -44,7 +44,8 @@ PREAMBLE = "\\version \"2.12.2\"\n"+
   "}\n"+
 	"fz = #(make-dynamic-script \"fz\")\n"+
   "ffp = #(make-dynamic-script \"ffp\")\n"+
-"sff = #(make-dynamic-script \"sff\")\n"
+  "rf = #(make-dynamic-script \"rf\")\n"+
+  "sff = #(make-dynamic-script \"sff\")\n"
 
 # Mapping between common dynamic marks ("expression") in Sibelius and
 # their LilyPond counterparts
@@ -62,7 +63,8 @@ EXPRESSION = {
 	"sf" => "\\sf",
 	"fz" => "\\fz",
   "ffp" => "\\ffp",
-  "sff" => "\\sff"
+  "sff" => "\\sff",
+  "rf" => "\\rf",
 }
 
 # Symbolic names for Sibelius articulation flags.

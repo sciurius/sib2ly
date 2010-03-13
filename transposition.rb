@@ -17,6 +17,7 @@ require 'barobject'
 
 class TranspositionBegin < BarObject
 	attr_reader :transposition
+  attr_reader :null
 
 	def initialize(transposition)
 		@transposition = transposition
@@ -27,9 +28,13 @@ class TranspositionBegin < BarObject
     20
   end
 
+  def null?
+    compute_transposition(@transposition) == 'c'
+  end
+
 	def to_ly
 		s = ""
-		s << "\\transpose #{compute_transposition(@transposition)} c {"
+		s << "\\transpose #{compute_transposition(@transposition)} c {" unless null?
 		s
 	end
 
@@ -46,7 +51,11 @@ class TranspositionBegin < BarObject
 end
 
 class TranspositionEnd < BarObject
+  def initialize(ts)
+    @ts = ts
+  end
+  
 	def to_ly
-		"}"
+		@ts.null? ? "" : "}"
 	end
 end
