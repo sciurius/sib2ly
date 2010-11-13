@@ -49,7 +49,7 @@ class SpecialBarline < BarObject
     when "Double"
       bar << "||"
     when "Dotted"
-      bar << "dashed" #sibelus 'dotted' means 'dashed'
+      bar << "dashed" # Sibelius 'dotted' means 'dashed'
     when "StartRepeat"
       bar << "|:"
     when "EndRepeat"

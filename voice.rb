@@ -93,7 +93,7 @@ class Voice
 		noterests
 	end
 
-		def detect_transpositions
+  def detect_transpositions
 		noterests = get_noterests
 		nonrests = noterests.select {|obj| not obj.is_rest?}
     lasttb = nil
@@ -312,15 +312,15 @@ class Voice
     @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
     link_notes
-#    link_noterests
+    #    link_noterests
     @fn = first_note
     @bars.each{|bar| bar.process}
- #   link_noterests
+    #   link_noterests
     #count_nr
 
     assign_spanners
     assign_time_signatures
-#    handle_start_repeat_barlines
+    #    handle_start_repeat_barlines
     convert_slurs_over_grace if $config["convert_slurs_over_grace"]
 		detect_transpositions
     #puts @nr_count

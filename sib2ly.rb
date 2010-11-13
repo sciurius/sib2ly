@@ -101,7 +101,7 @@ else
     if !$opts[:output]
       $opts[:output] = make_out_filename($opts[:input])
     end
-    verbose "Writing output to #{$opts[:output]}"
+    puts "Writing the masterpiece to #{$opts[:output]}"
     File.open($opts[:output], 'w') do |file|
       $ly = LilypondFile.new(file)
       score.to_ly
