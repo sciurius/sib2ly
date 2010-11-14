@@ -44,6 +44,7 @@ class NoteRest < BarObject
     @double_tremolos = 0
     @ottavation = 0
     @internal_priority = 0
+    @one_voice = true
   end
 
   def initialize_copy(source)
