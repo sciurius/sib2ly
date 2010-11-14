@@ -348,9 +348,10 @@ class Voice
     @bars.each{|bar| bar.delete_empty_texts}
     @bars.each{|bar| bar.fix_empty_bar(@voice)}
 
-    link_notes
+    
     #    link_noterests
     @fn = first_note
+#    link_notes
     @bars.each{|bar| bar.process}
     #   link_noterests
     #count_nr
@@ -362,6 +363,7 @@ class Voice
     convert_slurs_over_grace if $config["convert_slurs_over_grace"]
 		detect_transpositions
     #puts @nr_count
+
   end
 
   # Convert slurs over slurred grace notes to phrasing slurs

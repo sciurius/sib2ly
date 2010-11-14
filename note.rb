@@ -16,9 +16,9 @@
 class Note
   attr_reader :pitch,  :written_pitch, :name, :written_name,
     :previous_note, :ottavation, :bracketed, :accidental,
-    :written_accidental
+    :written_accidental, :parent
 	attr_accessor :diatonic_pitch, :written_diatonic_pitch, :tied
-  def initialize(xml)
+  def initialize(xml, parent)
     @pitch = xml["Pitch"].to_i;
     @accidental = xml["Accidental"].to_i;
     @written_accidental = xml["WrittenAccidental"].to_i;
@@ -29,6 +29,7 @@ class Note
     @tied = xml["Tied"].eql?("true");
     @bracketed = xml["Bracketed"].eql?("true");
     @written_diatonic_pitch = pitch2diatonic(@written_pitch, @written_name)
+    @parent = parent
   end
 
 	def transposition
@@ -46,6 +47,7 @@ class Note
       s << "\\parenthesize "
     end
     s << written_name2ly(@name)
+    @previous_note = parent.prev_note(self)
     if @previous_note
       s << get_octave(@previous_note.diatonic_pitch, @diatonic_pitch)
     end

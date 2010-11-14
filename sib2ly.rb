@@ -15,31 +15,41 @@ $:.unshift File.dirname(__FILE__)
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 require 'rubygems'
 require 'util'
 require 'options'
 require 'version'
-require 'nokogiri'
+
 require 'translatable'
 require 'constants'
 #require 'benchmark'
 require 'score'
 require 'assert'
 require 'trollop'
-require 'gems/rainbow'
 
-require 'win32console' if RUBY_PLATFORM =~ /win32/ || RUBY_PLATFORM =~ /mingw/
-#begin
-#  require 'Win32/Console/ANSI' if RUBY_PLATFORM =~ /win32/
-#rescue LoadError
-#  raise 'You must gem install win32console to use color on Windows'
-#end
+$LOAD_PATH.unshift File.expand_path(File.join(File.dirname(__FILE__), "gems"))
+
+#puts "RUBY_PLATFORM = #{RUBY_PLATFORM}\n"
+
+require 'rainbow'
+require 'Win32/Console/ANSI' if RUBY_PLATFORM =~ /win32/ || RUBY_PLATFORM =~ /mingw/
+begin
+  require 'nokogiri'
+rescue gem_error
+  error 'Cannot load the \'nokogiri\' gem. Please install it using: gem install nokogiri\n'
+  return
+end
 
 
 #include Benchmark
 require 'profiler'
 exit if Object.const_defined?(:Ocra)
+
+#[NilClass, FalseClass, TrueClass, Fixnum, Symbol].each do |klass|
+#  klass.send(:define_method, :dup) { self }
+#  klass.send(:define_method, :clone) { self }
+#end
+
 
 class LilypondFile
   attr_accessor :file
@@ -63,14 +73,14 @@ end
 logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + \
   "  Sibelius to LilyPond translator    (c) 2010 Kirill Sidorov\n\n"
 $opts = Trollop::options do
-	version logo
-	banner logo + "Usage: ruby #{File.basename($0)} [options] filename\n\n"
-	opt :output,	"Output file name", :type => String
+  version logo
+  banner logo + "Usage: ruby #{File.basename($0)} [options] filename\n\n"
+  opt :output,	"Output file name", :type => String
   #  opt :concise, "Produce more concise output"
-	opt :list, 		"List staves only and exit"
-	opt :staff,		"Process the specified staff only", :type => :int
-	opt :info, 		"Display score information"
-	opt :verbose, "Display verbose mesages"
+  opt :list, 		"List staves only and exit"
+  opt :staff,		"Process the specified staff only", :type => :int
+  opt :info, 		"Display score information"
+  opt :verbose, "Display verbose mesages"
   opt :pitches, "Collect pitch statistics"
 end
 
@@ -82,7 +92,7 @@ puts logo
 
 if !$opts[:input]
   error "Invalid input file name."
-	Process.exit
+  Process.exit
 end
 
 
@@ -93,8 +103,8 @@ score = Score.new
 score.from_xml(sib.root)
 
 if $opts[:list]
-	score.list_staves
-	Process.exit
+  score.list_staves
+  Process.exit
 end
 
 puts "Applying magic..."

@@ -35,7 +35,8 @@ class Bar
       fun.call(obj)
     end
     sel.each do |obj|
-      bar.add(obj.clone)
+      clone = obj.clone
+      bar.add(clone)
       #bar.add(Marshal.load( Marshal.dump(obj) ))
     end
     bar
@@ -342,8 +343,9 @@ class Bar
     graces.each  do |grace|
       owner = get_noterest_at(grace.position)
       owner.grace_notes << grace if owner
+      grace.parent = owner
     end
-    @objects -= graces
+    remove(graces)
   end
 
   def move_barlines
