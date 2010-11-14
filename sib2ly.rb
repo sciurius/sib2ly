@@ -27,6 +27,15 @@ require 'constants'
 require 'score'
 require 'assert'
 require 'trollop'
+require 'gems/rainbow'
+
+require 'win32console' if RUBY_PLATFORM =~ /win32/ || RUBY_PLATFORM =~ /mingw/
+#begin
+#  require 'Win32/Console/ANSI' if RUBY_PLATFORM =~ /win32/
+#rescue LoadError
+#  raise 'You must gem install win32console to use color on Windows'
+#end
+
 
 #include Benchmark
 require 'profiler'

@@ -57,8 +57,8 @@ class Bar
 
   # If the bar is musically empty (e.g. bar rest)
   def musically_empty?
-    obj_f = objects.select{|obj| !obj.is_a?(BarlineTweak)}
-    obj_f.length == 1 and obj_f.first.is_a?(BarRest)
+        obj_f = objects.select{|obj| !obj.is_a?(BarlineTweak)}
+        obj_f.length == 1 and obj_f.first.is_a?(BarRest)
   end
 
   def contains_music?
@@ -226,8 +226,8 @@ class Bar
 
   # Total length of all musical objects, including hidden NoteRests
   def real_duration
-    if musically_empty?
-      br = objects.select{|obj| obj.is_a?(BarRest)}
+    br = objects.select{|obj| obj.is_a?(BarRest)}
+    if br[0]
       return br[0].real_duration
     end
     nr = objects.select{|obj| obj.is_a?(NoteRest) and !obj.is_a?(BarRest) and !obj.grace}

@@ -23,6 +23,16 @@ class TimeSignature < BarObject
     12
   end
 
+  def position
+    0
+  end
+
+  def new
+    super
+  end
+
+  
+
   def initialize_from_xml(xml)
     super(xml)
     @numerator = xml["Numerator"].to_i;
@@ -41,6 +51,15 @@ class TimeSignature < BarObject
   end
 
   def to_ly
-    return "\\time " + @numerator.to_s + "/" + @denominator.to_s + " "
+    s = ""
+    if @hidden
+      s += "\\once \\override Staff.TimeSignature #'transparent = ##t "
+    end
+    s += "\\time " + to_s + " "
+    s
+  end
+
+  def to_s
+    @numerator.to_s + "/" + @denominator.to_s
   end
 end

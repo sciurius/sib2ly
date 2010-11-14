@@ -25,6 +25,14 @@ class BarObject < Translatable
     0
   end
 
+  def visible
+    !@hidden
+  end
+
+  def hide
+    @hidden = true
+  end
+
   def initialize_from_xml(xml)
     @position   = xml["position"].to_i;
     @voice      = xml["voicenumber"].to_i;

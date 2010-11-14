@@ -20,7 +20,7 @@ def verbose(text)
 end
 
 def warning(text)
-  puts "WARNING: " + text
+  puts "WARNING: ".foreground(:yellow).bright + text
 end
 
 def error(text)

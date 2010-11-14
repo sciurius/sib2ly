@@ -54,7 +54,7 @@ class Options
       line.strip!
       next if line == ''
       key, value = line.split('=', 2).map{|p| p.strip}
-      warning("Configuration key #{key} not exists!") if @options_default[key].nil?
+      warning("Configuration key #{key} does not exist!") if @options_default[key].nil?
       case @options_types[key]
       when 'boolean'
         value = !['yes', 'true'].index(value.downcase).nil?
@@ -69,7 +69,7 @@ class Options
 
   def [] key
     return @options[key] unless @options[key].nil?
-    warning("Option #{key} not exists!")
+    warning("Option #{key} does not exist!")
     return nil
   end
 end
