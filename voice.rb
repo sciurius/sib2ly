@@ -297,13 +297,37 @@ class Voice
     @spanners += ottavas
 
   end
-  
+
+  # Populate, for each Bar, its time_signature field,
+  # using time signature changes in the Sibelius score,
+  # i.e. specify it explicitly also for all the bars in which
+  # time signature change has not occurred.
   def assign_time_signatures
     prev = nil
     for bar in @bars
       ts = bar.objects.find{|obj| obj.is_a?(TimeSignature)}
       prev = ts if ts
       bar.time_signature = prev
+    end
+  end
+
+  def fix_time_signatures
+    return
+    # Doesn't work yet
+
+    for bar in @bars
+      if !bar.time_signature
+        bar_duration = bar.real_duration.duration
+        f = bar_duration.gcd(1024);
+        bar.time_signature = TimeSignature.new(bar_duration/f, 1024/f)
+      end
+      bar_duration = bar.real_duration
+      ts_duration = bar.time_signature.duration
+      if bar_duration != ts_duration
+        # The total duration of music in this bar mismatches the current
+        # time signature
+        puts "WARNING: The total duration of music in bar \#" + bar.number.to_s + " mismatches the time signature\n"
+      end
     end
   end
 
@@ -320,6 +344,7 @@ class Voice
 
     assign_spanners
     assign_time_signatures
+    fix_time_signatures
     #    handle_start_repeat_barlines
     convert_slurs_over_grace if $config["convert_slurs_over_grace"]
 		detect_transpositions

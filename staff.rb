@@ -64,6 +64,8 @@ class Staff < Translatable
   end
 
 	# Make a valid LilyPond identifier from the instrument name.
+  # Only alphabetical characters are allowed, not even digits!
+  # Digits are replaced with Roman numerals
   def safe_instrument_name
     s = @instrument_name
     DIGITS.each{|key,value| s = s.gsub(key, value)}
@@ -92,21 +94,27 @@ class Staff < Translatable
 
   end
 
+  # Return all BarObjects from all Bars from all Voices
+  def all_bar_objects
+    voices.each {|voice| voice.bars.each {|bar| bar.objects.each {|obj| yield obj}}}
+  end
+
+  def all_in_single_voice
+    # Select non-hidden, non-grace NoteRests
+    all_bar_objects do |obj|
+      if obj.is_a?(NoteRest) and not obj.grace and not obj.hidden
+        obj.one_voice = true
+      end
+    end
+  end
+
   def determine_voice_mode
+    # Determine, for each NoteRests, whether it should be typeset
+    # in single voice mode or in polyphonic mode.
     verbose("Determining voice mode for NoteRests.")
     if @is_system_staff
       # In the SystemStaff all NoteRests are always in \oneVoice mode
-      voices.each do |voice|
-        # Select non-hidden, non-grace noterests from i-th Bar in voice
-        voice.bars.each do |bar|
-          bar.objects.each do |obj|
-            if obj.is_a?(NoteRest) and
-                not obj.grace and not obj.hidden
-              obj.one_voice = true
-            end
-          end
-        end
-      end
+      all_in_single_voice
     else
       for i in 0...@bars.length
         objects = []

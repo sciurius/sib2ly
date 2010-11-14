@@ -42,6 +42,7 @@ class LilypondFile
   end
 end
 
+# Global output LilyPond file
 $ly = nil
 
 def ly(string = nil)
@@ -92,15 +93,17 @@ score.process
 
 
 if $opts[:info] 
-  # Display score information
+  # Display score information only
   puts score.info
 else
   if $opts[:pitches]
     puts score.pitch_classes
   else
-    if !$opts[:output]
-      $opts[:output] = make_out_filename($opts[:input])
-    end
+    # This is the main mode of operation: output the LilyPond file
+
+    # Generate the output file name it automatically unless it has been provided
+    $opts[:output] = make_out_filename($opts[:input]) unless $opts[:output]
+    
     puts "Writing the masterpiece to #{$opts[:output]}"
     File.open($opts[:output], 'w') do |file|
       $ly = LilypondFile.new(file)

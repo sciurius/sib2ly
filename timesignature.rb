@@ -15,8 +15,8 @@
 
 class TimeSignature < BarObject
   attr_accessor :numerator, :denominator
-  def initialize
-
+  def initialize(numerator = 4, denominator = 4)
+    @numerator, @denominator = numerator, denominator
   end
 
   def priority
@@ -33,6 +33,11 @@ class TimeSignature < BarObject
     ts = TimeSignature.new
     ts.initialize_from_xml(xml)
     ts
+  end
+
+  # Return the duration of a Bar with such TimeSignature in Sibelius units
+  def duration
+    1024 * @numerator / @denominator;
   end
 
   def to_ly

@@ -124,7 +124,7 @@ class Bar
     s = ""
     # handle pickup bar
     if @time_signature
-      time = 1024 * @time_signature.numerator / @time_signature.denominator;
+      time = @time_signature.duration
       if time != @length
         f = @length.gcd(1024);
         s << "\\partial "+ (1024/f).to_s + "*" + (@length/f).to_s + " "  ;
@@ -222,6 +222,16 @@ class Bar
       end
       last = n
     end
+  end
+
+  # Total length of all musical objects, including hidden NoteRests
+  def real_duration
+    if musically_empty?
+      br = objects.select{|obj| obj.is_a?(BarRest)}
+      return br[0].real_duration
+    end
+    nr = objects.select{|obj| obj.is_a?(NoteRest) and !obj.is_a?(BarRest) and !obj.grace}
+    return nr.inject(0){|sum, obj| sum += obj.real_duration}
   end
 
   def assign_texts
