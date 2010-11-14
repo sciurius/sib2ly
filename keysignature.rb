@@ -46,6 +46,6 @@ class KeySignature < BarObject
     else
       s << "\\minor "
     end
-    return s
+    s 
   end
 end

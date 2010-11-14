@@ -37,7 +37,8 @@ class Note
 	end
 
 	def previous_note=(note)
-		assert((nil == note) || note.is_a?(Note), "Trying to assign a non-Note object to previous_note")
+		assert((nil == note) || note.is_a?(Note), \
+        "Trying to assign a non-Note object to previous_note")
 		@previous_note = note
 	end
 

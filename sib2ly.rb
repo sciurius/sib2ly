@@ -15,11 +15,15 @@ $:.unshift File.dirname(__FILE__)
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Display logo and version first
+require 'version'
+logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + \
+  "  Sibelius to LilyPond translator    (c) 2010 Kirill Sidorov\n\n"
+puts logo
+
 require 'rubygems'
 require 'util'
 require 'options'
-require 'version'
-
 require 'translatable'
 require 'constants'
 #require 'benchmark'
@@ -27,28 +31,25 @@ require 'score'
 require 'assert'
 require 'trollop'
 
+
+# Load the gems that we carry in the ./gems folder for portability
 $LOAD_PATH.unshift File.expand_path(File.join(File.dirname(__FILE__), "gems"))
-
-#puts "RUBY_PLATFORM = #{RUBY_PLATFORM}\n"
-
 require 'rainbow'
 require 'Win32/Console/ANSI' if RUBY_PLATFORM =~ /win32/ || RUBY_PLATFORM =~ /mingw/
+
+# The nokogiri gem, as far as I know, has to be built on every platform natively,
+# so the best we can do if it is absent is to inform the user how to install it.
 begin
   require 'nokogiri'
-rescue gem_error
-  error 'Cannot load the \'nokogiri\' gem. Please install it using: gem install nokogiri\n'
-  return
+rescue LoadError
+  error "Cannot load the 'nokogiri' gem!\nPlease install it using: gem install nokogiri\n"
+  exit
 end
 
 
 #include Benchmark
 require 'profiler'
 exit if Object.const_defined?(:Ocra)
-
-#[NilClass, FalseClass, TrueClass, Fixnum, Symbol].each do |klass|
-#  klass.send(:define_method, :dup) { self }
-#  klass.send(:define_method, :clone) { self }
-#end
 
 
 class LilypondFile
@@ -70,31 +71,25 @@ def ly(string = nil)
 end
 
 
-logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + \
-  "  Sibelius to LilyPond translator    (c) 2010 Kirill Sidorov\n\n"
 $opts = Trollop::options do
   version logo
   banner logo + "Usage: ruby #{File.basename($0)} [options] filename\n\n"
   opt :output,	"Output file name", :type => String
   #  opt :concise, "Produce more concise output"
-  opt :list, 		"List staves only and exit"
-  opt :staff,		"Process the specified staff only", :type => :int
-  opt :info, 		"Display score information"
-  opt :verbose, "Display verbose mesages"
+  opt :list, 		"List staves and exit, do not translate music"
+  opt :staff,		"Process only the specified staff", :type => :int
+  opt :info, 		"Display score information, do not translate music"
+  opt :verbose, "Display verbose messages"
   opt :pitches, "Collect pitch statistics"
 end
 
 $config = Options.new
-
 $opts[:input] = ARGV.pop
-
-puts logo
 
 if !$opts[:input]
   error "Invalid input file name."
   Process.exit
 end
-
 
 puts "Reading the score from #{$opts[:input]}..."
 fin = File.new($opts[:input], 'r')

@@ -49,15 +49,20 @@ class NoteRest < BarObject
   end
 
   def initialize_copy(source)
+#    super
+#    operation = caller.find{|x| x !~ /'initialize_copy'/}.
+#      match(/`(dup|clone)'/)[1] or :dup
+#    source.instance_variables.each do |ivar|
+#      value = source.instance_variable_get(ivar)
+#      unless [NilClass, FalseClass, TrueClass, Fixnum, Symbol, self.class].include?(value.class)
+#        instance_variable_set(ivar, value.send(operation))
+#      end
+#    end
+
     super
-    operation = caller.find{|x| x !~ /'initialize_copy'/}.
-      match(/`(dup|clone)'/)[1] or :dup
-    source.instance_variables.each do |ivar|
-      value = source.instance_variable_get(ivar)
-      unless [NilClass, FalseClass, TrueClass, Fixnum, Symbol, self.class].include?(value.class)
-        instance_variable_set(ivar, value.send(operation))
-      end
-    end
+    @duration = @duration.dup
+    @real_duration = @real_duration.dup if @real_duration
+    @texts = @texts.dup
   end
 
 	# Number of semitones by which this NoteRest is transposed in the transposing
@@ -120,7 +125,7 @@ class NoteRest < BarObject
   #    bar.next_noterest(self)
   #  end
 
-    # Return the preceding NoteRest that is not a rest, or nil if this is
+  # Return the preceding NoteRest that is not a rest, or nil if this is
   # the first NoteRest.
   # (my old version)
   def prev_non_rest
@@ -132,22 +137,22 @@ class NoteRest < BarObject
     end
   end
 
-#  def prev_non_rest
-#    if grace
-#      siblings = parent.grace_notes.select{|obj| !obj.hidden}
-#      idx = siblings.index(self)
-#      if idx and idx > 0
-#        return siblings[idx - 1]
-#      else
-#        # We are the leftmost visible grace note
-#        return parent.prev_non_rest
-#      end
-#    else
-#      return prev if prev && !prev.rest?
-#      return prev.prev_non_rest if prev
-#      return nil
-#    end
-#  end
+  #  def prev_non_rest
+  #    if grace
+  #      siblings = parent.grace_notes.select{|obj| !obj.hidden}
+  #      idx = siblings.index(self)
+  #      if idx and idx > 0
+  #        return siblings[idx - 1]
+  #      else
+  #        # We are the leftmost visible grace note
+  #        return parent.prev_non_rest
+  #      end
+  #    else
+  #      return prev if prev && !prev.rest?
+  #      return prev.prev_non_rest if prev
+  #      return nil
+  #    end
+  #  end
 
   def prev_note(note)
     idx = notes.index(note)
@@ -243,12 +248,12 @@ class NoteRest < BarObject
     s = ""
     # index of the first non-hidden grace note
     first_non_hidden = @grace_notes.index(@grace_notes.find{|obj| !obj.hidden})
-#    if !first_non_hidden or @slurred > 0
-#      s << '\grace '
-#    elsif @grace_notes.first.acciaccatura
-#      s << '\acciaccatura '
-#    else
-#      s << '\appoggiatura '
+    #    if !first_non_hidden or @slurred > 0
+    #      s << '\grace '
+    #    elsif @grace_notes.first.acciaccatura
+    #      s << '\acciaccatura '
+    #    else
+    #      s << '\appoggiatura '
     if !@grace_slurred
 			s << '\\grace '
 		elsif @grace_notes[first_non_hidden].acciaccatura

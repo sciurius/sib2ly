@@ -27,8 +27,11 @@ class LyricItem < BarObject
 	def initialize_from_xml(xml)
 		super(xml)
 
-		# Get the visible part of text only
-		@text = unescape_xml(xml["Text"]).split("~").first
+    xml_text = xml["Text"]
+
+    # Remove escape characters from XML and truncate the "invisible"
+    # part of the string demarcated by a tilde (~)
+		@text = unescape_xml(xml_text).split("~").first
 
 		# Make sure @text is not nil
 		@text = "" unless @text

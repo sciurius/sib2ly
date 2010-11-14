@@ -24,5 +24,5 @@ def warning(text)
 end
 
 def error(text)
-	puts "ERROR: " + text
+	puts "ERROR: ".foreground(:red).bright + text
 end
