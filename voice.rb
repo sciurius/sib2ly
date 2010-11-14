@@ -304,11 +304,16 @@ class Voice
   # time signature change has not occurred.
   def assign_time_signatures
     prev = nil
+    reset = false
     for bar in @bars
       ts = bar.objects.find{|obj| obj.is_a?(TimeSignature)}
       prev = ts if ts
+      if !reset
       bar.time_signature = prev
-
+      else
+        bar.time_signature = bar.prev.time_signature
+      end
+      reset = false
       # Bars essentially have time signatures only in the SystemStaff
       if bar.time_signature
         #        bar_duration = bar.real_duration.duration
@@ -316,7 +321,7 @@ class Voice
         #        bar.time_signature = TimeSignature.new(bar_duration/f, 1024/f)
         bar_duration = bar.real_duration.duration
         ts_duration = bar.time_signature.duration
-        if bar_duration != ts_duration
+        if bar_duration > ts_duration
           # The total duration of music in this bar mismatches the current
           # time signature
           denom_duration = ts_duration / bar.time_signature.denominator
@@ -331,6 +336,7 @@ class Voice
           end
           warning "The total duration of music in bar \#" + bar.number.to_s + " mismatches the time signature.\n" +\
           "         The time signature was changed to " + bar.time_signature.to_s + " and made hidden.\n"
+          reset = true
           bar.time_signature.hide
           bar.add(bar.time_signature)
         end
