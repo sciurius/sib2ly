@@ -55,7 +55,7 @@ def pitch2diatonic(pitch, wn)
 end
   
 def get_octave (old, new)
-  puts old.to_s + " " + new.to_s
+#   old.to_s + " " + new.to_s
   str = ''
   return "" unless old
   pitch_margin = 3

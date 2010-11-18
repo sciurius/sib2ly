@@ -74,7 +74,6 @@ class Voice
       #bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) and (not obj.grace)}.each do |obj|
       bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) and (not obj.hidden)}.each do |obj|
         obj.notes.each do |note|
-#          print prev_note.pitch.to_s + note.pitch.to_s +  " " if prev_noteS
           note.previous_note = prev_note
           prev_note = note
         end
@@ -83,7 +82,6 @@ class Voice
         #   end
       end
     end
-#    puts ""
   end
 
   #return ALL noterests, including grace
