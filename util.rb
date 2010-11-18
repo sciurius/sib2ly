@@ -55,6 +55,7 @@ def pitch2diatonic(pitch, wn)
 end
   
 def get_octave (old, new)
+  puts old.to_s + " " + new.to_s
   str = ''
   return "" unless old
   pitch_margin = 3
@@ -146,4 +147,14 @@ def backtrace
   rescue => detail
     puts detail.backtrace[1..-1]
   puts
+end
+
+# call this anywhere inside a method
+# it will print out the call stack for the current execution
+# play with the numbers to narrow down the area of interest
+
+def print_call_stack(from = 2, to = nil)
+  (from..(to ? to : caller.length)).each do |idx|
+    p "[#{idx}]: #{caller[idx]}"
+  end
 end

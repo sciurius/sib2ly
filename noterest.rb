@@ -352,6 +352,7 @@ class NoteRest < BarObject
 
     # Convert the actual notes
     s << notes_to_ly
+
 		
     # add articulations
     unless is_rest?
@@ -393,9 +394,9 @@ class NoteRest < BarObject
     position + real_duration.duration
   end
 
-  # Determine if only some of the notes are tied
-  # 1) If all notes are tied then the NoteRest is tied, but individual notes are not
-  # 2) If only some notes are tied, then the NoteRest is not tied
+  # Determine if only some of the notes are tied:
+  # 1) If all notes are tied then the NoteRest is tied, but individual notes are not.
+  # 2) If only some notes are tied, then the NoteRest is not tied.
   def determine_ties
     all_notes_tied = @notes.inject(true){|sum, note| sum = sum and note.tied}
     if all_notes_tied and not is_rest?
@@ -449,7 +450,7 @@ class NoteRest < BarObject
   end
 
   def to_s
-    [notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
+    ""#[notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
   end
 
   def priority

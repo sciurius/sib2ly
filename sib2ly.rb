@@ -29,11 +29,11 @@ require 'constants'
 #require 'benchmark'
 require 'score'
 require 'assert'
-require 'trollop'
 
 
 # Load the gems that we carry in the ./gems folder for portability
 $LOAD_PATH.unshift File.expand_path(File.join(File.dirname(__FILE__), "gems"))
+require 'trollop'
 require 'rainbow'
 require 'Win32/Console/ANSI' if RUBY_PLATFORM =~ /win32/ || RUBY_PLATFORM =~ /mingw/
 

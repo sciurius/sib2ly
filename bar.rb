@@ -137,8 +137,8 @@ class Bar
       #      end
     end
     # write objects
-    s << objects.select { |obj| not (obj.is_a?(Text) or obj.is_a?(Tuplet))}.map do
-      |obj| obj.to_ly
+    s << objects.select { |obj| not (obj.is_a?(Text) or obj.is_a?(Tuplet))}.map do |obj|
+      obj.to_ly
     end.join(' ');
     #    # barlines go at the end of the bar
     #    @objects.select{|obj| obj.is_a?(SpecialBarline)}.each do |obj|

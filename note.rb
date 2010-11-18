@@ -48,13 +48,18 @@ class Note
       s << "\\parenthesize "
     end
     s << written_name2ly(@name)
-    @previous_note = parent.prev_note(self)
+#    @previous_note = parent.prev_note(self)
+
+#    if @previous_note
+#      print @previous_note.to_s + " "
+#    else
+#      print "- "
+#    end
+
     if @previous_note
       s << get_octave(@previous_note.diatonic_pitch, @diatonic_pitch)
     end
-    if @tied
-      s << "~ "
-    end
+    s << "~ " if @tied
     return s
   end
 

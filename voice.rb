@@ -74,6 +74,7 @@ class Voice
       #bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) and (not obj.grace)}.each do |obj|
       bar.objects.select{|obj| obj.is_a?(NoteRest) and (not obj.is_rest?) and (not obj.hidden)}.each do |obj|
         obj.notes.each do |note|
+          print prev_note.pitch.to_s + note.pitch.to_s +  " " if prev_note
           note.previous_note = prev_note
           prev_note = note
         end
@@ -82,6 +83,7 @@ class Voice
         #   end
       end
     end
+    puts ""
   end
 
   #return ALL noterests, including grace
@@ -350,10 +352,12 @@ class Voice
 
     
     #    link_noterests
+    link_notes
     @fn = first_note
-#    link_notes
+    
     @bars.each{|bar| bar.process}
-    #   link_noterests
+#    link_notes
+#    link_noterests
     #count_nr
 
     assign_spanners
@@ -363,7 +367,7 @@ class Voice
     convert_slurs_over_grace if $config["convert_slurs_over_grace"]
 		detect_transpositions
     #puts @nr_count
-
+#    link_notes
   end
 
   # Convert slurs over slurred grace notes to phrasing slurs
