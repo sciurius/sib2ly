@@ -49,15 +49,15 @@ class NoteRest < BarObject
   end
 
   def initialize_copy(source)
-#    super
-#    operation = caller.find{|x| x !~ /'initialize_copy'/}.
-#      match(/`(dup|clone)'/)[1] or :dup
-#    source.instance_variables.each do |ivar|
-#      value = source.instance_variable_get(ivar)
-#      unless [NilClass, FalseClass, TrueClass, Fixnum, Symbol, self.class].include?(value.class)
-#        instance_variable_set(ivar, value.send(operation))
-#      end
-#    end
+    #    super
+    #    operation = caller.find{|x| x !~ /'initialize_copy'/}.
+    #      match(/`(dup|clone)'/)[1] or :dup
+    #    source.instance_variables.each do |ivar|
+    #      value = source.instance_variable_get(ivar)
+    #      unless [NilClass, FalseClass, TrueClass, Fixnum, Symbol, self.class].include?(value.class)
+    #        instance_variable_set(ivar, value.send(operation))
+    #      end
+    #    end
 
     super
     @duration = @duration.dup
@@ -289,7 +289,7 @@ class NoteRest < BarObject
     # select voice mode
     if (not prev and @one_voice) or (prev and !prev.one_voice and @one_voice)
       s << "\\oneVoice "
-    elsif (not prev and not @one_voice) or (prev and prev.one_voice and !@one_voice)
+    elsif !@one_voice and (!prev or (prev and prev.one_voice))
       s << VOICE[@voice] << " " if @voice
     end
     s
@@ -363,7 +363,11 @@ class NoteRest < BarObject
 
     # add text
     @texts.each{|text| s << text.to_ly}
-    #    s << "^\\markup{I}" if one_voice
+    if @voice == 2
+      s << "_\\markup{I}" if one_voice
+      s << "_\\markup{P}" if prev
+      s << "_\\markup{PI}" if (prev and prev.one_voice)
+    end
     #    s << "^\\markup{B}" if begins_tremolo?
     #    s << "^\\markup{E}" if ends_tremolo?
 
@@ -386,6 +390,14 @@ class NoteRest < BarObject
     # close the brace after the last NoteRest in a tuplet, if necessary.
     (@ends_tuplet).times { s << "}" }
 
+    if @voice == 2
+      puts to_s
+      if prev
+        puts "<- " + prev.to_s
+      else
+        puts "<- No prev"
+      end
+    end
     return s
   end
 
@@ -450,7 +462,7 @@ class NoteRest < BarObject
   end
 
   def to_s
-    ""#[notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
+    [notes_to_ly, position.to_s, real_duration.to_i.to_s].join(' ')
   end
 
   def priority

@@ -46,9 +46,21 @@ class Staff < Translatable
 		return if $opts[:list] # Do not proceed to read bars
     
 		puts "\tProcessing staff " + full_instrument_name + "..." if full_instrument_name
-    (xml/"Bar").each_with_index do |bar, idx|
-      bars << Bar.new_from_xml(bar, self)
-      bars.last.prev = (idx > 0 ? bars[idx - 1] : nil)
+    $first_bar ||= 1
+    (xml/"Bar").each_with_index do |bar, number|
+      include = true
+      if number + 1 < $first_bar
+        include = false
+      end
+      if ($last_bar and (number + 1 > $last_bar))
+        include = false
+      end
+      if include
+        previous_bar = bars.last
+        bars << Bar.new_from_xml(bar, self)
+        # Link bar to the previous one if such exists
+        bars.last.prev = previous_bar
+      end
     end
   end
 

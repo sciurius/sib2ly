@@ -16,7 +16,8 @@
 require 'barobject'
 
 class Spanner < BarObject
-  attr_accessor :start_bar_number, :end_bar_number, :end_position, :style_id, :nr_begin, :nr_end, :text_begin, :text_end
+  attr_accessor :start_bar_number, :end_bar_number,
+    :end_position, :style_id, :nr_begin, :nr_end, :text_begin, :text_end
 
   def initialize
     @text_begin = ""
@@ -25,8 +26,8 @@ class Spanner < BarObject
 
   def initialize_from_xml(xml)
     super(xml)
-    @start_bar_number = xml.parent["BarNumber"].to_i
-    @end_bar_number = xml["EndBarNumber"].to_i
+    @start_bar_number = xml.parent["BarNumber"].to_i - ($first_bar - 1)
+    @end_bar_number = xml["EndBarNumber"].to_i - ($first_bar - 1)
     @end_position = xml["EndPosition"].to_i
     @style_id = xml["StyleId"]
   end
@@ -118,12 +119,13 @@ end
 
 
 
-OTTAVA={
+OTTAVA = {
   "line.staff.octava.minus15" => -2,
   "line.staff.octava.minus8" => -1,
   "line.staff.octava.plus8" => 1,
   "line.staff.octava.plus15" => 2
 }
+
 class OctavaLine < Spanner
   def initialize
 
@@ -131,7 +133,7 @@ class OctavaLine < Spanner
   def text_begin_before
     ot = OTTAVA[@style_id]
     if ot
-      return '\ottava #' + ot.to_s + ' '
+      return '\\ottava #' + ot.to_s + ' '
     else
       return ''
     end
@@ -143,7 +145,7 @@ class OctavaLine < Spanner
     return ''
   end
   def text_end
-    return '\ottava #0 '
+    return '\\ottava #0 '
   end
   def OctavaLine.new_from_xml(xml)
     ol = OctavaLine.new

@@ -14,4 +14,4 @@ rem
 rem You should have received a copy of the GNU General Public License
 rem along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ruby %~dp0sib2ly.rb %1 %2 %3 %4
+ruby %~dp0sib2ly.rb %1 %2 %3 %4 %5 %6 %7 %8 %9

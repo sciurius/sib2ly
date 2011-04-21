@@ -54,7 +54,7 @@ class Score < Translatable
 
   end
 
-  def from_xml(xml)
+  def from_xml(xml, staves_to_process = nil)
     @file_name = xml["FileName"]
     @score_duration = xml["ScoreDuration"].to_i
     @title = xml["Title"]
@@ -74,8 +74,11 @@ class Score < Translatable
     @instruments=[]
     verbose("Creating staves from XML.")
     (xml/"Staff").each_with_index do |staff, number|
-      @staves << Staff.new(staff)
-      @staves.last.number = number + 1
+      number = number + 1 # Use base-1 numbering of staves
+      if staves_to_process and (staves_to_process.include?(number))
+        @staves << Staff.new(staff)
+        @staves.last.number = number
+      end
     end
 
     verbose("Creating SystemStaff from XML.")

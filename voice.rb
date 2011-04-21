@@ -300,8 +300,8 @@ class Voice
 
   # Populate, for each Bar, its time_signature field,
   # using time signature changes in the Sibelius score,
-  # i.e. specify it explicitly also for all the bars in which
-  # time signature change has not occurred.
+  # i.e. specify it explicitly for all the bars even for those
+  # in which time signature change has not occurred.
   def assign_time_signatures
     prev = nil
     reset = false
@@ -365,7 +365,7 @@ class Voice
     convert_slurs_over_grace if $config["convert_slurs_over_grace"]
 		detect_transpositions
     #puts @nr_count
-#    link_notes
+    #link_notes
   end
 
   # Convert slurs over slurred grace notes to phrasing slurs

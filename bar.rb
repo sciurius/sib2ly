@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 %w{lyricitem barobject noterest barrest keysignature tuplet specialbarline barline_tweak}.each {|obj| require obj}
+
 class Bar
   attr_accessor :length, :number, :system_staff, :time_signature,
     :nr_count, :bar_voice, :parent, :prev

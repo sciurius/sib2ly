@@ -18,7 +18,7 @@ $:.unshift File.dirname(__FILE__)
 # Display logo and version first
 require 'version'
 logo = "SIB2LY v" + VERSION_MAJOR + "." + VERSION_MINOR + \
-  "  Sibelius to LilyPond translator    (c) 2010 Kirill Sidorov\n\n"
+  "  Sibelius to LilyPond translator    (c) 2010--2011 Kirill Sidorov\n\n"
 puts logo
 
 require 'rubygems'
@@ -29,6 +29,8 @@ require 'constants'
 #require 'benchmark'
 require 'score'
 require 'assert'
+require 'lyfile'
+
 
 
 # Load the gems that we carry in the ./gems folder for portability
@@ -38,38 +40,18 @@ require 'rainbow'
 require 'Win32/Console/ANSI' if RUBY_PLATFORM =~ /win32/ || RUBY_PLATFORM =~ /mingw/
 
 # The nokogiri gem, as far as I know, has to be built on every platform natively,
-# so the best we can do if it is absent is to inform the user how to install it.
+# so the best we can do (if nokogiri is absent) is to inform the user how to install it.
 begin
   require 'nokogiri'
 rescue LoadError
   error "Cannot load the 'nokogiri' gem!\nPlease install it using: gem install nokogiri\n"
   exit
 end
-
+# Assume all gems are loaded at this point
 
 #include Benchmark
-require 'profiler'
+#require 'profiler'
 exit if Object.const_defined?(:Ocra)
-
-
-class LilypondFile
-  attr_accessor :file
-  def initialize(file)
-    @file = file
-  end
-  def <<(string)
-    file.write(string)
-  end
-end
-
-# Global output LilyPond file
-$ly = nil
-
-def ly(string = nil)
-  $ly << string if string
-  $ly << "\n"
-end
-
 
 $opts = Trollop::options do
   version logo
@@ -77,11 +59,25 @@ $opts = Trollop::options do
   opt :output,	"Output file name", :type => String
   #  opt :concise, "Produce more concise output"
   opt :list, 		"List staves and exit, do not translate music"
-  opt :staff,		"Process only the specified staff", :type => :int
+  opt :staves,	"Process only the specified staves", :type => :ints
   opt :info, 		"Display score information, do not translate music"
   opt :verbose, "Display verbose messages"
   opt :pitches, "Collect pitch statistics"
+  opt :begin,   "The first bar to process", :type => :int
+  opt :end,     "The last bar to process", :type => :int
+  opt :compile, "Run LilyPond after conversion"
 end
+
+staves_to_process = $opts[:staves]
+if staves_to_process
+  verbose "I will translate only staves #{staves_to_process}."
+else
+  verbose "I will translate all staves."
+end
+$first_bar = $opts[:begin]
+$last_bar = $opts[:end]
+
+
 
 $config = Options.new
 $opts[:input] = ARGV.pop
@@ -95,7 +91,7 @@ puts "Reading the score from #{$opts[:input]}..."
 fin = File.new($opts[:input], 'r')
 sib = Nokogiri.XML(fin)
 score = Score.new
-score.from_xml(sib.root)
+score.from_xml(sib.root, staves_to_process)
 
 if $opts[:list]
   score.list_staves
@@ -105,25 +101,33 @@ end
 puts "Applying magic..."
 score.process
 
-
 if $opts[:info] 
   # Display score information only
+  puts
+  puts "Score information"
+  puts "================="
   puts score.info
-else
-  if $opts[:pitches]
-    puts score.pitch_classes
-  else
-    # This is the main mode of operation: output the LilyPond file
+  Process.exit
+end
+if $opts[:pitches]
+  puts score.pitch_classes
+  Process.exit
+end
 
-    # Generate the output file name it automatically unless it has been provided
-    $opts[:output] = make_out_filename($opts[:input]) unless $opts[:output]
+# This is the main mode of operation: output the LilyPond file
+
+# Generate the output file name automatically unless it has been provided
+$opts[:output] = make_out_filename($opts[:input]) unless $opts[:output]
     
-    puts "Writing the masterpiece to #{$opts[:output]}"
-    File.open($opts[:output], 'w') do |file|
-      $ly = LilypondFile.new(file)
-      score.to_ly
-    end
-    puts "Done ;-P"
-  end
+puts "Writing the masterpiece to #{$opts[:output]}"
+File.open($opts[:output], 'w') do |file|
+  $ly = LilypondFile.new(file)
+  score.to_ly
+end
+puts "Done ;-P"
+
+if $opts[:compile]
+  puts "Running LilyPond..."
+  system("lilypond --ps #{$opts[:output]}")
 end
 
