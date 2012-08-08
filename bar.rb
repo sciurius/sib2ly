@@ -339,8 +339,8 @@ class Bar
   def move_barlines
     prev_bar = @parent.prev_bar(self)
     @objects.select{|obj| obj.is_a?(SpecialBarline) and obj.position.eql?(0)}.each do |barline|
-      barline.position = prev_bar.length
       if prev_bar
+        barline.position = prev_bar.length
         prev_bar.add(barline)
       end
       remove(barline)
