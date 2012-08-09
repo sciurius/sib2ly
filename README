@@ -30,6 +30,29 @@ plugin, and an intelligent interpreter that translates the music into the
 target LilyPond language. This ensures better extensibility and
 maintainability.
 
+################ IMPORTANT NOTICE ################
+
+SIB2LY is developed by Kirill Sidorov and licensed under the GPL.
+Kirill has changed priorities and will not actively maintain the
+program for the time being.
+
+I use SIB2LY on a regular base, and decided to make Kirill's work
+available via GitHub.
+
+The GitHup repo has two branches: master and alpha. The master branch
+is what I use and made some modifications to. It is fairly stable and
+does a lot of good and useful work.
+
+The alpha branch contains the latest modifications by Kirill and is
+very unstable, i.e., it doesn't work. I may have a look at his
+modifications and incorporate them in the master branch.
+
+	      Johan Vromans, August 2012
+
+################ END of IMPORTANT NOTICE ################
+
+==> The following information may be slightly outdated. Patches
+    welcome -- Johan
 
 # Installation
 
